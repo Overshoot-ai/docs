@@ -11,9 +11,6 @@
   "navigation": {
     "tabs": [
       {
-        "tab": "API reference"
-      },
-      {
         "tab": "Documentation",
         "pages": [
           "untitled-page",
@@ -21,6 +18,9 @@
           "the-stream",
           "models"
         ]
+      },
+      {
+        "tab": "API reference"
       }
     ]
   },
