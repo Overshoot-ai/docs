@@ -11,14 +11,16 @@
   "navigation": {
     "tabs": [
       {
-        "tab": "Documentation",
+        "tab": "Documentation for humans",
         "pages": [
           "intro",
           "best-practices",
           "the-stream",
           "models",
-          "chat-completion"
-        ]
+          "chat-completion",
+          "quickstart"
+        ],
+        "icon": "person"
       },
       {
         "tab": "API reference",

@@ -2,7 +2,7 @@
 title: "Chat Completion"
 ---
 
-**<u>Intro to the Chat Completion API</u>**
+## Intro
 
 If you’re familiar with the Chat Completion API, feel free to skip to the next section.
 
@@ -69,28 +69,51 @@ When the inference provider receives the request, they use the models' chat temp
 
 For Vision Language Models (VLM), image and video data can be passed in the message content in the form of bytes or URLs.
 
-```json
-# base64-encoded bytes
+<CodeGroup>
+
+```json URL wrap
 {
-  "role": "user", "content": [
-		   {"type": "text", "text": "what do you see in this picture"},
-		   {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ..."}}
-	   ]
-}
-# URL 
-{
-  "role": "user", "content": [
-		   {"type": "text", "text": "how many people appeared in this video?"},
-		   {"type": "video_url", "video_url": {"url": "<https://example.com/video.mp4>"}}
-	   ]
+	"role": "user",
+	"content": [
+		{
+			"type": "text",
+			"text": "how many people appeared in this video?"
+		},
+		{
+			"type": "video_url",
+			"video_url": {
+				"url": "<https://example.com/video.mp4>"
+			}
+		}
+	]
 }
 ```
+
+```json Base 64 wrap
+{
+	"role": "user",
+	"content": [
+		{
+			"type": "text",
+			"text": "what do you see in this picture"
+		},
+		{
+			"type": "image_url",
+			"image_url": {
+				"url": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ..."
+			}
+		}
+	]
+}
+```
+
+</CodeGroup>
 
 If a message contains an image / video, it will get converted into tokens and interleaved with the text.
 
 Note: some models don't allow you to interleave text and images
 
-**<u>Using Overshoot with Chat Completion</u>**
+## Using Overshoot with Chat Completion
 
 When you create a stream and connect it to your camera source, Overshoot allows you to reference parts (or all) of your stream in the message content of your Chat Completion Request with a simple URL.
 
