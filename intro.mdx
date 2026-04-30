@@ -35,6 +35,8 @@ That's it. Everything else — the model menu, the URL grammar for picking out a
 
 ## Mental model for agents
 
+See the [Glossary](/glossary) for canonical definitions of every term used across the docs.
+
 A `Stream` is a leased server-side handle for a live video feed. Once a publisher is attached (via the LiveKit room URL + token returned at creation), Overshoot ingests frames continuously and indexes them. The handle is opaque from the model's perspective — you reference moments inside the stream by URL, not by uploading bytes.
 
 A chat completion request is OpenAI-compatible. The only Overshoot-specific construct is the URL inside `image_url` / `video_url` content parts:
