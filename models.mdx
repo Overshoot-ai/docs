@@ -1,3 +1,204 @@
 ---
 title: "Models"
+description: "Vision-language models you can target from `/chat/completions` — context length, tokens per frame, and frame limits."
 ---
+
+Overshoot serves a curated set of vision-language models tuned for real-time
+inference. Pick one based on the [picker below](#picking-a-model), pass its
+`id` as the `model` field on `/chat/completions`, and Overshoot routes the
+request to a healthy endpoint.
+
+## List available models
+
+Availability changes as endpoints come online and go offline. Always query
+`/models` before starting a stream. **No auth required.**
+
+<CodeGroup>
+
+```shellscript curl
+curl https://api.overshoot.ai/v1beta/models
+```
+
+```python python
+import httpx
+
+r = httpx.get("https://api.overshoot.ai/v1beta/models")
+ready = [m for m in r.json()["data"] if m["status"] == "ready"]
+for m in ready:
+    print(m["id"])
+```
+
+```typescript typescript
+const res = await fetch("https://api.overshoot.ai/v1beta/models");
+const { data } = await res.json();
+const ready = data.filter((m) => m.status === "ready");
+```
+
+</CodeGroup>
+
+The response is OpenAI-compatible — same shape OpenAI's `listModels` returns,
+with one extra `status` field per entry.
+
+<Accordion title="Sample response">
+  ```json
+  {
+    "object": "list",
+    "data": [
+      {
+        "id": "Qwen/Qwen3.5-9B",
+        "object": "model",
+        "created": 1714492800,
+        "owned_by": "overshoot",
+        "status": "ready"
+      },
+      {
+        "id": "google/gemma-4-E4B-it",
+        "object": "model",
+        "created": 1714492800,
+        "owned_by": "overshoot",
+        "status": "ready"
+      }
+    ]
+  }
+  ```
+</Accordion>
+
+## Active models
+
+<Info>
+  Snapshot as of **2026-04-30**. The `/models` endpoint is the source of
+  truth — treat this table as a quick reference, not a guarantee.
+</Info>
+
+| Model | Provider | Context (served / native) | Tokens / frame | Interleaved text + video | Max frames |
+|---|---|---|---|---|---|
+| `Qwen/Qwen3-VL-30B-A3B-Instruct` | Qwen — open-weights, MoE 3B active | 32K / 256K (1M w/ YaRN) | ~200 @ 480p | Yes (Interleaved-MRoPE) | Capped by context |
+| `Qwen/Qwen3.5-9B` | Qwen — open-weights | 32K / 256K (1M w/ YaRN) | ~200 @ 480p | Yes | Capped by context |
+| `Qwen/Qwen3.5-27B` | Qwen — open-weights | 32K / 256K (1M w/ YaRN) | ~200 @ 480p | Yes | Capped by context |
+| `Qwen/Qwen3.5-35B-A3B` | Qwen — open-weights, MoE 3B active | 16K / 256K (1M w/ YaRN) | ~200 @ 480p | Yes | Capped by context (16K) |
+| `google/gemma-4-31B-it` | Google — open-weights | 256K | 70 / 140 / 280 / 560 / 1120 (per request) | Yes | ~60 (1 fps × 60 s) |
+| `google/gemma-4-26B-A4B-it` | Google — open-weights, MoE | 256K | 70 / 140 / 280 / 560 / 1120 | Yes | ~60 (1 fps × 60 s) |
+| `google/gemma-4-E4B-it` | Google — open-weights | 128K | 70 / 140 / 280 / 560 / 1120 | Yes | ~60 (1 fps × 60 s) |
+| `google/gemma-4-E2B-it` | Google — open-weights | 128K | 70 / 140 / 280 / 560 / 1120 | Yes | ~60 (1 fps × 60 s) |
+| `Hcompany/Holo3-35B-A3B` | H Company — Qwen3.5-35B-A3B fine-tune (GUI / agents) | 16K / 256K | ~200 @ 480p | Yes | Capped by context (16K) |
+
+### How to read the columns
+
+<AccordionGroup>
+
+<Accordion title="Context — served vs native" icon="ruler">
+  **Served** is the `--max-model-len` we run with. We cap below the model's
+  native ceiling so KV cache fits the GPU at our target concurrency. **Native**
+  is what the model card claims. Where one number is shown, served == native.
+</Accordion>
+
+<Accordion title="Tokens / frame — Qwen models" icon="image">
+  Qwen3.5 and Qwen3-VL share the same processor: patch 16,
+  `temporal_patch_size=2`, `spatial_merge_size=2`. The formula:
+
+  ```
+  tokens_per_frame ≈ (H × W) / 2048
+  ```
+
+  | Resolution | Tokens / frame |
+  |---|---|
+  | 480p (854×480) | ~200 |
+  | 720p (1280×720) | ~450 |
+  | 1080p (1920×1080) | ~1010 |
+</Accordion>
+
+<Accordion title="Tokens / frame — Gemma 4" icon="sliders">
+  You pick the visual-token budget per request — `70`, `140`, `280`, `560`,
+  or `1120`:
+
+  - **70–280** — classification, captioning, video understanding
+  - **560–1120** — OCR, document parsing, small text
+
+  Default is 256 tokens.
+</Accordion>
+
+<Accordion title="Max frames" icon="film">
+  - **Qwen** — no hard model-side cap. The binding limit is
+    `served_context / tokens_per_frame` minus prompt + output budget.
+  - **Gemma 4** — Google documents 60 s at 1 fps as the supported envelope
+    (~60 frames).
+</Accordion>
+
+<Accordion title="Interleaved text + video" icon="layer-group">
+  The model can mix text segments between visual tokens inside a single
+  message — instead of forcing all visual content into one block followed by
+  text. Every active model supports this.
+</Accordion>
+
+</AccordionGroup>
+
+## Picking a model
+
+<CardGroup cols={2}>
+
+<Card title="Best overall quality" icon="trophy">
+  **`Qwen/Qwen3.5-27B`** — leads on video, coding, and instruction following.
+</Card>
+
+<Card title="High-throughput vision" icon="bolt">
+  **`Qwen/Qwen3.5-35B-A3B`** — near-27B vision quality at a fraction of the
+  compute (MoE, 3B active per token).
+</Card>
+
+<Card title="Strong vision, moderate size" icon="scale-balanced">
+  **`Qwen/Qwen3.5-9B`** — recommended starting point. Beats last-gen 30B
+  models on every vision benchmark.
+</Card>
+
+<Card title="Native temporal video grounding" icon="film">
+  **`Qwen/Qwen3-VL-30B-A3B-Instruct`** — Interleaved-MRoPE plus
+  Text–Timestamp Alignment for second-level video reasoning.
+</Card>
+
+<Card title="GUI / computer-use agents" icon="arrow-pointer">
+  **`Hcompany/Holo3-35B-A3B`** — Qwen3.5-35B-A3B fine-tuned for navigation
+  and computer-use tasks.
+</Card>
+
+<Card title="Long-context multimodal" icon="scroll">
+  **`google/gemma-4-31B-it`** — 256K context with a configurable per-frame
+  token budget.
+</Card>
+
+</CardGroup>
+
+## Use a model
+
+Pass the `id` from `/models` straight into `/chat/completions`:
+
+```shellscript wrap
+curl -X POST https://api.overshoot.ai/v1beta/chat/completions \
+  -H "Authorization: Bearer $OVERSHOOT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "Qwen/Qwen3.5-9B",
+    "messages": [{
+      "role": "user",
+      "content": [
+        { "type": "text", "text": "What is the person doing?" },
+        { "type": "image_url", "image_url": {
+            "url": "https://api.overshoot.ai/v1beta/streams/$STREAM_ID/media?frame_index=-1"
+        }}
+      ]
+    }]
+  }'
+```
+
+See [Chat Completion](/chat-completion) for the full request/response shape.
+
+<Warning>
+  Proprietary models (Gemini, Claude, OpenAI) are wired up server-side but
+  aren't currently health-passing in prod, so they don't appear in `/models`.
+  If you need one of them, [reach out](mailto:founders@overshoot.ai).
+</Warning>
+
+<Warning>
+  "Tokens / frame" for Qwen models scales with resolution. The numbers above
+  assume 480p — the resolution our benchmark suite uses. Higher resolutions
+  consume context faster.
+</Warning>
