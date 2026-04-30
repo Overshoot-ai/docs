@@ -1,3 +1,17 @@
 ---
 title: "The Stream"
 ---
+
+The core piece of Overshoot is the `Stream` entity.
+
+Clients can connect any live video source to Overshoot via the `Stream` entity.
+
+Creating a `Stream` is straightforward. Use the `/streams` endpoint with an API key as follows:
+
+```shellscript
+curl -X POST <https://api.overshoot.ai/v1beta/streams>
+```
+
+This will return a `Stream ID` and a [Livekit room](https://docs.livekit.io/intro/basics/rooms-participants-tracks/rooms/). The user can then use any [Livekit SDK](https://docs.livekit.io/reference/) to join the room and publish their video stream to it. Our media gateway service will join the room, ingest your video stream and prepares it for inference.
+
+Note that the `Stream` is a leased session. In other words, it will hold the state of your live video feed (up to 10min) as long as it’s alive. Read below on how to keep a stream alive.

@@ -1,3 +1,12 @@
 ---
-title: "Best Practices"
+title: "Pro tips"
 ---
+
+Latency tips: 
+
+- Inference latency scales with input and output size. For most requests involving vision data, the image and video tokens represent a large portion of the prompt. To keep latency small, only include the parts in the stream that are relevant. For example, most tasks only need single frames.
+
+Stream tips: 
+
+- Remember to keep your streams alive using the `/keepalive` endpoint 
+- When calling `/keepalive` , we issue a new token that you can use to join the room in case the client gets disconnected 

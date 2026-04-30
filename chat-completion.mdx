@@ -1,0 +1,125 @@
+---
+title: "Chat Completion"
+---
+
+**<u>Intro to the Chat Completion API</u>**
+
+If you’re familiar with the Chat Completion API, feel free to skip to the next section.
+
+Let’s take a minute here to cover the Chat Completion API. This API is the building block of almost all AI applications today.
+
+A Chat Completion Request contains primarily two attributes:
+
+- model: The model the user would like to run
+- messages: A structured chat-form representation of the form. It’s a list containing system messages, user messages (”user questions”), assistant messages and tool calls.
+
+<Accordion title="Example of Chat Completion request">
+  ```json request.json
+  {
+  "model": "google/gemma-4-E4B-it",
+  "messages": [
+   {
+     "role": "system",
+     "content": [
+       {
+         "type": "text",
+         "text": "You are a helpful assistant"
+       }
+     ]
+   },
+   {
+     "role": "user",
+     "content": [
+       {
+         "type": "text",
+         "text": "what is the capital of france?"
+       }
+     ]
+   },
+   {
+     "role": "assistant",
+     "content": [
+       {
+         "type": "text",
+         "text": "the capital of france is paris."
+       }
+     ]
+   },
+   {
+     "role": "user",
+     "content": [
+       {
+         "type": "text",
+         "text": "how about morocco?"
+       }
+     ]
+   }
+  ]
+  }
+  
+  ```
+</Accordion>
+
+Almost all inference providers today provide Chat Completion inference endpoints. You can either call it over raw HTTP or using the `openai` SDK.
+
+<Accordion title="Example of Chat Completion request using OpenAI python library">
+</Accordion>
+
+When the inference provider receives the request, they use the models' chat template to turn it into a single string and tokenize it. In the example above, the inference provider will respond with 
+
+For Vision Language Models (VLM), image and video data can be passed in the message content in the form of bytes or URLs.
+
+```json
+# base64-encoded bytes
+{
+  "role": "user", "content": [
+		   {"type": "text", "text": "what do you see in this picture"},
+		   {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ..."}}
+	   ]
+}
+# URL 
+{
+  "role": "user", "content": [
+		   {"type": "text", "text": "how many people appeared in this video?"},
+		   {"type": "video_url", "video_url": {"url": "<https://example.com/video.mp4>"}}
+	   ]
+}
+```
+
+If a message contains an image / video, it will get converted into tokens and interleaved with the text.
+
+Note: some models don't allow you to interleave text and images
+
+**<u>Using Overshoot with Chat Completion</u>**
+
+When you create a stream and connect it to your camera source, Overshoot allows you to reference parts (or all) of your stream in the message content of your Chat Completion Request with a simple URL.
+
+- Use `type=image_url` to refer to a particular frame in the video. For example, the last frame can be referenced as follows:
+
+```json wrap
+{
+	"type": "image_url", 
+	"image_url": {"url": "ovs://streams/{stream_id}?frame_index=-1"}
+}
+```
+
+- Use `type=video_url` to refer to a segment in the video. Unlike the frame, a video segment must have a `start` and `end` . If no `end` is specified, we default to `now` . For example, to refer to the last 5 seconds of the stream,
+
+```json wrap
+{"type": "video_url", "video_url": {"url": "ovs://streams/{stream_id}?start_offset_ms=-5000"}}
+```
+
+- To look at the first 5 minutes of the stream, use `start_offset_ms` instead.
+
+```json wrap
+{"type": "video_url", "video_url": {"url": "ovs://streams/{stream_id}?start_offset_ms=0&end_offset_ms=10000"}}
+```
+
+The mental model here is that when you create a `Stream` , Overshoot gives you a handle to reference any part (or all) of the stream in any conversation with any model.
+
+That is, you can:
+
+- Have a model look at multiple segments of the same stream in the same converstion
+- The model can also watch segments from different streams at the same time
+- Have small model watch the stream for a specific event and escalate it to a bigger model
+- Have multiple models watch the same stream for a given event and only escalate it if event is triggered

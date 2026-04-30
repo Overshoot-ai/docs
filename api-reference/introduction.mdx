@@ -1,17 +1,14 @@
 ---
-title: Introduction
-description: "Use the Overshoot REST API to ingest live video, ask vision-language models what's happening, and manage stream lifecycle."
+title: "Introduction"
+description: "Use the Overshoot REST API to ingest live video, query vision-language models and manage stream lifecycle."
 ---
 
-The Overshoot REST API turns a live video feed into a conversation. Publish frames
-over WebRTC, then call an OpenAI-compatible chat completions endpoint to ask any
-vision-language model about your stream — over the last few seconds, the latest
-frame, or anywhere in the stream's history.
+The Overshoot REST API turns a live video feed into a conversation. Publish frames over WebRTC, then call an OpenAI-compatible chat completions endpoint to ask any vision-language model about your stream — over the last few seconds, the latest frame, or anywhere in the stream's history.
 
 ## Endpoints
 
 - [List models](/api-reference/list-models): Discover the vision-language models you can target in chat completions.
-- [Create stream](/api-reference/create-stream): Open a live stream and get a LiveKit room URL + token to start publishing frames.
+- [Create stream](/api-reference/create-stream): Open a live stream and get a LiveKit room URL \+ token to start publishing frames.
 - [Get stream](/api-reference/get-stream): Inspect the state of a stream — frame counts, recent FPS, lease expiry.
 - [Renew stream lease](/api-reference/keepalive-stream): Keep a stream alive past the default 5-minute idle window.
 - [Delete stream](/api-reference/delete-stream): End a stream and release its resources.
@@ -31,22 +28,19 @@ https://api.overshoot.ai/v1beta
 
 ## Authentication
 
-The Overshoot API uses bearer tokens for authentication. Include your API key in the
-`Authorization` header on every authenticated request:
+The Overshoot API uses bearer tokens for authentication. Include your API key in the `Authorization` header on every authenticated request:
 
 ```bash
 curl https://api.overshoot.ai/v1beta/streams/<id> \
   -H "Authorization: Bearer ovs-..."
 ```
 
-API keys are prefixed with `ovs-` and can be created in the
-[Overshoot dashboard](https://overshoot.ai/dashboard).
+API keys are prefixed with `ovs-` and can be created in the [Overshoot dashboard](https://overshoot.ai/dashboard).
 
 [List models](/api-reference/list-models) is the only unauthenticated endpoint.
 
 <Note>
-Calls using your API key can incur costs. Treat keys as secrets and never commit them
-to source control or expose them in client-side code.
+  Calls using your API key can incur costs. Treat keys as secrets and never commit them to source control or expose them in client-side code.
 </Note>
 
 ## Errors
@@ -58,7 +52,7 @@ Non-2xx responses use this shape:
 ```
 
 | Code | Meaning |
-| ---- | ------- |
+| --- | --- |
 | 401, 403 | Missing or invalid API key. |
 | 402 | Insufficient credits. |
 | 404 | Stream not found, or not owned by your key. |
