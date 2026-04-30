@@ -21,12 +21,8 @@
       },
       {
         "tab": "API reference",
-        "groups": [
-          {
-            "group": "API reference",
-            "icon": "file-json",
-            "pages": ["api-reference/introduction"]
-          },
+        "pages": [
+          "api-reference/introduction",
           {
             "group": "Stream",
             "icon": "video",
@@ -39,13 +35,17 @@
           },
           {
             "group": "Models",
-            "icon": "cpu",
-            "pages": ["api-reference/list-models"]
+            "icon": "microchip-ai",
+            "pages": [
+              "api-reference/list-models"
+            ]
           },
           {
             "group": "Chat",
-            "icon": "message-square",
-            "pages": ["api-reference/chat-completions"]
+            "icon": "message",
+            "pages": [
+              "api-reference/chat-completions"
+            ]
           }
         ]
       }
