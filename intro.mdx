@@ -11,4 +11,88 @@ We will walk you through both endpoints and explain how you can use them to buil
 
 ## Authentication
 
-Note that you will need an API key for all the requests below. For the sake of simplicity, we will skip the Authorization header in the `curl` commands below.
+Head to the Overshoot platform to get an API key.
+
+<Card title="Get your API Key" icon="key" horizontal href="https://platform.overshoot.ai">
+</Card>
+
+## **Get started in 3 steps**
+
+<Steps>
+  <Step title="Create a stream">
+    We call the `/streams` endpoint to create a [Stream](/the-stream). 
+
+    ```shellscript
+    curl -X POST https://api.overshoot.ai/v1beta/streams \
+    -H "Authorization: Bearer $OVERSHOOT_API_KEY"
+    ```
+
+    The command above returns a Room URL and a Token. Save those for the next step. 
+
+    <Accordion title="Sample Response">
+      ```json
+      {
+          "id": "2ea5a604-d225-4cd2-82ac-b907cb0b4f63",
+          "state": "active",
+          "publish": {
+              "type": "livekit",
+              "url": "wss://livekit.overshoot.ai",
+              "token": "ey...k"
+          },
+          "expires_at_ms": 1777529931184,
+          "ttl_seconds": 300
+      }
+      ```
+    </Accordion>
+  </Step>
+  <Step title="Connect your webcam to the stream">
+    Use your Room URL and Token to connect your camera using [LiveKit Meet](https://meet.livekit.io/?tab=custom) 
+  </Step>
+  <Step title="Ask the model what it can see">
+    Once the camera is connect, send a simple [Chat Completion](/chat-completion) request to the model
+
+    ```shellscript highlight={12} wrap
+    curl -X POST https://dev-api.overshoot.ai/v1beta/chat/completions \
+    -H "Authorization: Bearer $OVERSHOOT_API_KEY" \
+    -H "Content-Type: application/json" \
+    -d '{
+    "model": "google/gemma-4-E4B-it",
+    "messages": [
+        {
+        "role": "user",
+        "content": [
+            {"type": "text", "text": "What am I wearing?"},
+            {"type": "image_url", "image_url": {
+                "url": "https://dev-api.overshoot.ai/v1/streams/$STREAM_ID/media?frame_index=-1"
+            }}
+        ]
+        }]}'
+    ```
+
+    <Accordion title="Sample Response">
+      ```json
+      {
+          "id": "34225b75-abae-4c58-8191-2abdc8f437de",
+          "object": "chat.completion",
+          "created": 1777530304,
+          "model": "google/gemma-4-E4B-it",
+          "choices": [
+              {
+                  "index": 0,
+                  "message": {
+                      "role": "assistant",
+                      "content": "Plaid robe, t-shirt."
+                  },
+                  "finish_reason": "stop"
+              }
+          ],
+          "usage": {
+              "prompt_tokens": 307,
+              "completion_tokens": 9,
+              "total_tokens": 316
+          }
+      }
+      ```
+    </Accordion>
+  </Step>
+</Steps>
