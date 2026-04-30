@@ -1,0 +1,150 @@
+---
+title: "Getting Started"
+---
+
+The Overshoot interface is composed of two main endpoints:
+
+- `/streams`
+- `/chat/completions`
+
+In what follows, we will walk you through both endpoints and explain how you can use them to build any realtime vision application.
+
+## Authentication 
+
+Note that you will need an API key for all the requests below. For the sake of simplicity, we will skip the header in the `curl` command.
+
+## The Stream 
+
+The core piece of Overshoot is the `Stream` entity.
+
+Clients can connect any live video source to Overshoot via the `Stream` entity.
+
+Creating a `Stream` is straightforward. Use the `/streams` endpoint with an API key as follows:
+
+```shellscript
+curl -X POST <https://api.overshoot.ai/v1beta/streams>
+```
+
+This will return a `Stream ID` and a Livekit room. The user can then use any [Livekit SDK](https://docs.livekit.io/reference/) to join the room and publish their video stream to it. Our media gateway service will join the room, ingest your video stream and prepares it for inference.
+
+Note that the `Stream` is a leased session. In other words, it will hold the state of your live video feed (up to 10min) as long as it’s alive. Read below on how to keep a stream alive.
+
+## **How to interact with the stream: Chat Completion API**
+
+If you’re familiar with the Chat Completion API, feel free to skip to the next section.
+
+Let’s take a minute here to cover the Chat Completion API. This API is the building block of almost all AI applications today.
+
+A Chat Completion Request contains primarily two attributes:
+
+- model: The model the user would like to run
+- messages: A structured chat-form representation of the form. It’s a list containing system messages, user messages (”user questions”), assistant messages and tool calls.
+
+**Example:**
+
+```json wrap
+{
+	"model": "google/gemma-4-E4B-it",
+	"messages":[
+		# System: You are a helpful assistant
+		{
+		"role": "system", "content": [{"type": "text", "text": "You are a helpful assistant"}]
+		},
+    # User: what is the capital of france?
+    {
+    "role": "user", "content": [{"type": "text", "text": "what is the capital of france?"}]
+    },
+    # AI: The capital of France is Paris 
+    {
+    "role": "assistant", "content": [{"type": "text", "text": "the capital of france is paris."}]
+    },
+    # User: How about Morocco?
+    {
+    "role": "user", "content": [{"type": "text", "text": "how about morocco?"}]
+    }
+		]
+}
+```
+
+When the inference provider receives the request, they turn into a single string thanks to a chat using the model’s chat template and finally tokenize it. In this case, the assistant will respond using a
+
+For Vision Language Models (VLM), image and video data can be passed in the message content in the form of bytes or URLs.
+
+```json
+# base64-encoded bytes
+{
+  "role": "user", "content": [
+		   {"type": "text", "text": "what do you see in this picture"},
+		   {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ..."}}
+	   ]
+}
+# URL 
+{
+  "role": "user", "content": [
+		   {"type": "text", "text": "how many people appeared in this video?"},
+		   {"type": "video_url", "video_url": {"url": "<https://example.com/video.mp4>"}}
+	   ]
+}
+```
+
+If a message contains an image / video, it will get converted into tokens and interleaved with the text.
+
+Note: some models don't allow you to interleave text and images
+
+## **How to use Overshoot with Chat Completion**
+
+When you create a stream and connect it to your camera source, Overshoot allows you to reference parts (or all) of your stream in the message content of your Chat Completion Request with a simple URL.
+
+- Use `type=image_url` to refer to a particular frame in the video. For example, the last frame can be referenced as follows:
+
+```json wrap
+{
+	"type": "image_url", 
+	"image_url": {"url": "ovs://streams/{stream_id}?frame_index=-1"}
+}
+```
+
+- Use `type=video_url` to refer to a segment in the video. Unlike the frame, a video segment must have a `start` and `end` . If no `end` is specified, we default to `now` . For example, to refer to the last 5 seconds of the stream,
+
+```json wrap
+{"type": "video_url", "video_url": {"url": "ovs://streams/{stream_id}?start_offset_ms=-5000"}}
+```
+
+- To look at the first 5 minutes of the stream, use `start_offset_ms` instead.
+
+```json wrap
+{"type": "video_url", "video_url": {"url": "ovs://streams/{stream_id}?start_offset_ms=0&end_offset_ms=10000"}}
+```
+
+The mental model here is that when you create a `Stream` , Overshoot gives you a handle to reference any part (or all) of the stream in any conversation with any model.
+
+That is, you can:
+
+- Have a model look at multiple segments of the same stream in the same converstion
+- The model can also watch segments from different streams at the same time
+- Have small model watch the stream for a specific event and escalate it to a bigger model
+- Have multiple models watch the same stream for a given event and only escalate it if event is triggered
+
+## **Stream State**
+
+The `Stream` session holds your video feed (up to a limit) as long as it’s alive. If you push no video feed to it, it will sit empty. You can check the state of a stream along with other attributes such as number of frames received, FPS and time to expiry as follows:
+
+```shellscript
+curl -X GET <https://api.overshoot.ai/v1beta/streams/{stream_id}>
+```
+
+A `Stream` can die if it expires (5 min), gets deleted by the client or gets reaped. Read below on how to keep a stream alive.
+
+## **How to kill and keep a stream alive**
+
+When Overshoot starts ingesting a stream, we do a lot of processing in the backend to have your stream easily accessible for any model you pick. To avoid starting a stream and forgetting about it, a stream will expire after 5 minutes unless the client renews the lease. To renew the lease, the client must call the `/keepalive` endpoint with their `Stream ID` regularly (e.g. every 2min).
+
+```shellscript
+curl -X POST <https://api.overshoot.ai/streams/{stream_id}/keepalive>
+```
+
+Now that we understand how to keep a stream alive, how about killing the stream? Just use the `DELETE` method with your `Stream ID` .
+
+```shellscript
+curl -X DELETE <https://api.overshoot.ai/streams/{stream_id}>
+```
