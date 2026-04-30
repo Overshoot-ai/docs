@@ -20,7 +20,34 @@
         ]
       },
       {
-        "tab": "API reference"
+        "tab": "API reference",
+        "groups": [
+          {
+            "group": "API reference",
+            "icon": "file-json",
+            "pages": ["api-reference/introduction"]
+          },
+          {
+            "group": "Stream",
+            "icon": "video",
+            "pages": [
+              "api-reference/create-stream",
+              "api-reference/get-stream",
+              "api-reference/delete-stream",
+              "api-reference/keepalive-stream"
+            ]
+          },
+          {
+            "group": "Models",
+            "icon": "cpu",
+            "pages": ["api-reference/list-models"]
+          },
+          {
+            "group": "Chat",
+            "icon": "message-square",
+            "pages": ["api-reference/chat-completions"]
+          }
+        ]
       }
     ]
   },

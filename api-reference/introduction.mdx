@@ -1,0 +1,72 @@
+---
+title: Introduction
+description: "Use the Overshoot REST API to ingest live video, ask vision-language models what's happening, and manage stream lifecycle."
+---
+
+The Overshoot REST API turns a live video feed into a conversation. Publish frames
+over WebRTC, then call an OpenAI-compatible chat completions endpoint to ask any
+vision-language model about your stream — over the last few seconds, the latest
+frame, or anywhere in the stream's history.
+
+## Endpoints
+
+- [List models](/api-reference/list-models): Discover the vision-language models you can target in chat completions.
+- [Create stream](/api-reference/create-stream): Open a live stream and get a LiveKit room URL + token to start publishing frames.
+- [Get stream](/api-reference/get-stream): Inspect the state of a stream — frame counts, recent FPS, lease expiry.
+- [Renew stream lease](/api-reference/keepalive-stream): Keep a stream alive past the default 5-minute idle window.
+- [Delete stream](/api-reference/delete-stream): End a stream and release its resources.
+- [Chat completions](/api-reference/chat-completions): Ask any vision-language model about a stream's frames.
+
+### Common use cases
+
+- **Real-time Q&A over live video**: Publish a webcam or camera feed with [Create stream](/api-reference/create-stream), then call [Chat completions](/api-reference/chat-completions) with a `video_url` content part pointing at the last few seconds.
+- **Frame-level analysis**: Use [Chat completions](/api-reference/chat-completions) with an `image_url` content part referencing `frame_index=-1` to ask about the most recent frame.
+- **Long-running sessions**: Call [Renew stream lease](/api-reference/keepalive-stream) before the lease expires to keep a stream open beyond the default 5 minutes.
+
+## Base URL
+
+```text
+https://api.overshoot.ai/v1beta
+```
+
+## Authentication
+
+The Overshoot API uses bearer tokens for authentication. Include your API key in the
+`Authorization` header on every authenticated request:
+
+```bash
+curl https://api.overshoot.ai/v1beta/streams/<id> \
+  -H "Authorization: Bearer ovs-..."
+```
+
+API keys are prefixed with `ovs-` and can be created in the
+[Overshoot dashboard](https://overshoot.ai/dashboard).
+
+[List models](/api-reference/list-models) is the only unauthenticated endpoint.
+
+<Note>
+Calls using your API key can incur costs. Treat keys as secrets and never commit them
+to source control or expose them in client-side code.
+</Note>
+
+## Errors
+
+Non-2xx responses use this shape:
+
+```json
+{ "detail": "Stream not found" }
+```
+
+| Code | Meaning |
+| ---- | ------- |
+| 401, 403 | Missing or invalid API key. |
+| 402 | Insufficient credits. |
+| 404 | Stream not found, or not owned by your key. |
+| 422 | Request validation failed. `details` array lists the offending fields. |
+| 503 | Service is draining or starting up — retry. |
+
+## Related topics
+
+- [The Stream](/the-stream) — concept guide for the stream lifecycle.
+- [Models](/models) — overview of available vision-language models.
+- [Best practices](/best-practices) — production tips for low latency and cost.
