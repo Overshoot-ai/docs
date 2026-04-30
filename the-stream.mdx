@@ -15,3 +15,27 @@ curl -X POST <https://api.overshoot.ai/v1beta/streams>
 This will return a `Stream ID` and a [Livekit room](https://docs.livekit.io/intro/basics/rooms-participants-tracks/rooms/). The user can then use any [Livekit SDK](https://docs.livekit.io/reference/) to join the room and publish their video stream to it. Our media gateway service will join the room, ingest your video stream and prepares it for inference.
 
 Note that the `Stream` is a leased session. In other words, it will hold the state of your live video feed (up to 10min) as long as it’s alive. Read below on how to keep a stream alive.
+
+## **Stream State**
+
+The `Stream` session holds your video feed (up to a limit) as long as it’s alive. If you push no video feed to it, it will sit empty. You can check the state of a stream along with other attributes such as number of frames received, FPS and time to expiry as follows:
+
+```shellscript
+curl -X GET <https://api.overshoot.ai/v1beta/streams/{stream_id}>
+```
+
+A `Stream` can die if it expires (5 min), gets deleted by the client or gets reaped. Read below on how to keep a stream alive.
+
+## **How to kill and keep a stream alive**
+
+When Overshoot starts ingesting a stream, we do a lot of processing in the backend to have your stream easily accessible for any model you pick. To avoid starting a stream and forgetting about it, a stream will expire after 5 minutes unless the client renews the lease. To renew the lease, the client must call the `/keepalive` endpoint with their `Stream ID` regularly (e.g. every 2min).
+
+```shellscript
+curl -X POST <https://api.overshoot.ai/streams/{stream_id}/keepalive>
+```
+
+Now that we understand how to keep a stream alive, how about killing the stream? Just use the `DELETE` method with your `Stream ID` .
+
+```shellscript
+curl -X DELETE <https://api.overshoot.ai/streams/{stream_id}>
+```
