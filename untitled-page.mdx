@@ -7,11 +7,11 @@ The Overshoot interface is composed of two main endpoints:
 - `/streams`
 - `/chat/completions`
 
-In what follows, we will walk you through both endpoints and explain how you can use them to build any realtime vision application.
+We will walk you through both endpoints and explain how you can use them to build any realtime vision application.
 
 ## Authentication 
 
-Note that you will need an API key for all the requests below. For the sake of simplicity, we will skip the header in the `curl` command.
+Note that you will need an API key for all the requests below. For the sake of simplicity, we will skip the Authorization header in the `curl` commands below.
 
 ## The Stream 
 
@@ -25,7 +25,7 @@ Creating a `Stream` is straightforward. Use the `/streams` endpoint with an API 
 curl -X POST <https://api.overshoot.ai/v1beta/streams>
 ```
 
-This will return a `Stream ID` and a Livekit room. The user can then use any [Livekit SDK](https://docs.livekit.io/reference/) to join the room and publish their video stream to it. Our media gateway service will join the room, ingest your video stream and prepares it for inference.
+This will return a `Stream ID` and a [Livekit room](https://docs.livekit.io/intro/basics/rooms-participants-tracks/rooms/). The user can then use any [Livekit SDK](https://docs.livekit.io/reference/) to join the room and publish their video stream to it. Our media gateway service will join the room, ingest your video stream and prepares it for inference.
 
 Note that the `Stream` is a leased session. In other words, it will hold the state of your live video feed (up to 10min) as long as it’s alive. Read below on how to keep a stream alive.
 
