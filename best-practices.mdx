@@ -23,6 +23,10 @@ A few habits make Overshoot apps feel snappy and behave well in production.
   <Card title="Drop resolution" icon="compress">
     480p Qwen costs ~5× fewer tokens per frame than 1080p. Publish at the resolution you actually need.
   </Card>
+
+  <Card title="Reuse one HTTP session" icon="plug">
+    When firing multiple requests concurrently, share a single client (`httpx.AsyncClient`, `requests.Session`, a kept-alive `fetch` agent) so connections are pooled and TLS handshakes amortize. A fresh client per call adds a full round-trip every time.
+  </Card>
 </CardGroup>
 
 ## Streams
