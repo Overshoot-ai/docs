@@ -7,7 +7,7 @@ info:
     WebRTC (LiveKit), then ask a vision-language model questions about what's happening
     using an OpenAI-compatible chat completions endpoint.
 servers:
-  - url: https://api.overshoot.ai/v1beta
+  - url: https://api.overshoot.ai/v1
 security:
   - bearerAuth: []
 tags:
