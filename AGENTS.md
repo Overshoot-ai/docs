@@ -48,10 +48,19 @@ Use these terms consistently. Don't invent synonyms.
 
 Use these consistently. Don't mix `dev-api` or `/v1` into customer-facing pages.
 
+## API versions
+
+The site publishes two API versions:
+
+- **v1beta** — current. All new content (guides, examples, API reference) targets v1beta unless the file path is explicitly under `api-reference/v0.2/`.
+- **v0.2** — legacy. Kept on the site as a deprecated reference for existing integrations. Never recommend v0.2 patterns in new content. Every v0.2 page must keep its deprecation banner.
+
+Mintlify's auto-generated `/llms.txt` and `/llms-full.txt` index only the default version (v1beta), so agents reading the docs through those surfaces never see v0.2 — the intended behaviour. Don't fight it.
+
 ## What not to document
 
-- Internal-only endpoints (`/spectate`, `/feedback`, `/info`, `/config/prompt`).
-- Stream behavior beyond what the public API guarantees.
+- In v1beta content, never reference v0.2-only endpoints (`/spectate`, `/feedback`, `/info`, `/config/prompt`, `/update-prompt`). They live exclusively under `api-reference/v0.2/` as deprecated reference.
+- Stream behavior beyond what the public v1beta API guarantees.
 - Implementation details of the inference router.
 - Anything related to internal admin tooling, the dev portal, or backend microservice architecture.
 
