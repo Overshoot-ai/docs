@@ -1,53 +1,86 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "Mintlify Starter Kit",
+  "name": "Overshoot",
+  "description": "Overshoot is a real-time video understanding API: ingest live frames over WebRTC and query them with vision-language models through an OpenAI-compatible interface.",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#171717",
+    "light": "#FAFAFA",
+    "dark": "#171717"
   },
   "favicon": "/favicon.svg",
   "navigation": {
-    "tabs": [
+    "versions": [
       {
-        "tab": "Documentation for humans",
-        "pages": [
-          "intro",
-          "best-practices",
-          "the-stream",
-          "models",
-          "chat-completion",
-          "quickstart"
-        ],
-        "icon": "person"
+        "version": "v1beta",
+        "default": true,
+        "tabs": [
+          {
+            "tab": "Guides",
+            "icon": "book-open",
+            "pages": [
+              "intro",
+              "quickstart",
+              "the-stream",
+              "chat-completion",
+              "models",
+              "glossary",
+              "best-practices"
+            ]
+          },
+          {
+            "tab": "API reference",
+            "icon": "code",
+            "pages": [
+              "api-reference/introduction",
+              {
+                "group": "Streams",
+                "icon": "video",
+                "pages": [
+                  "api-reference/create-stream",
+                  "api-reference/get-stream",
+                  "api-reference/keepalive-stream",
+                  "api-reference/delete-stream"
+                ]
+              },
+              {
+                "group": "Models",
+                "icon": "microchip-ai",
+                "pages": [
+                  "api-reference/list-models"
+                ]
+              },
+              {
+                "group": "Chat",
+                "icon": "message",
+                "pages": [
+                  "api-reference/chat-completions"
+                ]
+              }
+            ]
+          }
+        ]
       },
       {
-        "tab": "API reference",
-        "pages": [
-          "api-reference/introduction",
+        "version": "v0.2",
+        "tabs": [
           {
-            "group": "Stream",
-            "icon": "video",
+            "tab": "API reference",
+            "icon": "code",
             "pages": [
-              "api-reference/create-stream",
-              "api-reference/get-stream",
-              "api-reference/delete-stream",
-              "api-reference/keepalive-stream"
-            ]
-          },
-          {
-            "group": "Models",
-            "icon": "microchip-ai",
-            "pages": [
-              "api-reference/list-models"
-            ]
-          },
-          {
-            "group": "Chat",
-            "icon": "message",
-            "pages": [
-              "api-reference/chat-completions"
+              "api-reference/v0.2/introduction",
+              {
+                "group": "Streams",
+                "icon": "video",
+                "pages": [
+                  "api-reference/v0.2/create-stream",
+                  "api-reference/v0.2/stream-info",
+                  "api-reference/v0.2/keepalive-stream",
+                  "api-reference/v0.2/update-prompt",
+                  "api-reference/v0.2/spectate-stream",
+                  "api-reference/v0.2/close-stream"
+                ]
+              }
             ]
           }
         ]
@@ -62,32 +95,31 @@
     "links": [
       {
         "label": "Support",
-        "href": "mailto:hi@mintlify.com"
+        "href": "mailto:founders@overshoot.ai"
       }
     ],
     "primary": {
       "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
+      "label": "Platform",
+      "href": "https://platform.overshoot.ai"
     }
   },
   "contextual": {
     "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
+      "copy",
+      "view",
+      "chatgpt",
+      "claude",
+      "perplexity",
+      "mcp",
+      "cursor",
+      "vscode"
+    ]
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+      "github": "https://github.com/overshoot-ai",
+      "linkedin": "https://linkedin.com/company/overshootai"
     }
   }
 }

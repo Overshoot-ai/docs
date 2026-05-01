@@ -2,3 +2,14 @@
 title: List models
 openapi: 'GET /models'
 ---
+
+## What's in the response
+
+- Each entry's **`id`** is what you pass as `model` on `/chat/completions`. Use it verbatim — IDs are case-sensitive.
+- **`status`** is the only mutable field worth checking:
+  - `ready` — at least one healthy replica is serving. Use it.
+  - `loading` — replicas are starting; may flip to `ready` in seconds, may not. Don't depend on it.
+  - Models with **no** healthy replica are omitted from the response entirely.
+- A model that's `ready` here can still return `503` on `/chat/completions` if its replica falls over between calls. Always handle `503` with a retry or a fallback to another `ready` model.
+
+This endpoint is the **only** one that doesn't require an API key. List it before every session — don't hardcode model IDs.
