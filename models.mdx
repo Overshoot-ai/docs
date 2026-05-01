@@ -61,8 +61,14 @@ The response is OpenAI-compatible — same shape `listModels` returns, with one 
 ## Active models
 
 <Info>
-  Snapshot as of **2026-05-01**. The `/models` endpoint is the source of truth — treat this table as a quick reference, not a guarantee.
+  Snapshot as of **2026-05-01**. The `/models` endpoint is the source of truth — treat these tables as a quick reference, not a guarantee.
 </Info>
+
+Models on Overshoot fall into two groups: **Overshoot-hosted** (open-weights models we run on our own GPU fleet, tuned for real-time inference) and **proprietary passthrough** (Gemini / Claude / OpenAI, which we proxy to the upstream provider). Default to the hosted models — that's where Overshoot's latency advantage lives.
+
+### Overshoot-hosted
+
+These are the fast path. We run them on our own GPUs, sized for sub-second time-to-first-token on single-frame inputs and high-throughput video.
 
 | Model | Provider | Context | Tokens / frame | Max frames |
 | --- | --- | --- | --- | --- |
@@ -73,6 +79,8 @@ The response is OpenAI-compatible — same shape `listModels` returns, with one 
 | `Qwen/Qwen3.5-9B` | Qwen | 32K | ~200 @ 480p | Capped by context |
 | `Qwen/Qwen3.5-27B` | Qwen | 32K | ~200 @ 480p | Capped by context |
 | `Qwen/Qwen3.5-35B-A3B` | Qwen | 16K | ~200 @ 480p | Capped by context (16K) |
+| `Qwen/Qwen3.6-27B-FP8` | Qwen | 32K | ~200 @ 480p | Capped by context |
+| `Qwen/Qwen3.6-35B-A3B-FP8` | Qwen | 16K | ~200 @ 480p | Capped by context (16K) |
 | `google/gemma-4-31B-it` | Google | 256K | 70 / 140 / 280 / 560 / 1120 | ~60 (1 fps × 60 s) |
 | `google/gemma-4-26B-A4B-it` | Google | 256K | 70 / 140 / 280 / 560 / 1120 | ~60 (1 fps × 60 s) |
 | `google/gemma-4-E4B-it` | Google | 128K | 70 / 140 / 280 / 560 / 1120 | ~60 (1 fps × 60 s) |
@@ -81,6 +89,30 @@ The response is OpenAI-compatible — same shape `listModels` returns, with one 
 | `allenai/Molmo2-8B` | AI2 | 32K | varies (see model card) | Capped by context |
 | `openbmb/MiniCPM-V-4_5` | OpenBMB | 32K | varies (see model card) | Capped by context |
 | `Hcompany/Holo3-35B-A3B` | H Company | 16K | ~200 @ 480p | Capped by context (16K) |
+
+### Proprietary passthrough
+
+These are upstream APIs we expose through the same OpenAI-compatible surface for convenience. **They are not part of Overshoot's real-time path.**
+
+<Warning>
+  Proprietary models are passthrough to Google / Anthropic / OpenAI. Time-to-first-token is bounded by the upstream provider — typically **seconds**, not the sub-second latency Overshoot-hosted models hit. Reach for these only when you specifically need a frontier proprietary model; otherwise stay on the hosted list.
+</Warning>
+
+| Model | Upstream | Modalities | Notes |
+| --- | --- | --- | --- |
+| `gemini-2.5-flash-lite` | Google Gemini | image, video | Highest-throughput Gemini tier |
+| `gemini-2.5-flash` | Google Gemini | image, video | |
+| `gemini-2.5-pro` | Google Gemini | image, video | Strongest reasoning in the 2.5 line |
+| `gemini-3-flash-preview` | Google Gemini | image, video | |
+| `gemini-3.1-flash-lite-preview` | Google Gemini | image, video | |
+| `gemini-3.1-pro-preview` | Google Gemini | image, video | Frontier reasoning, lowest RPM quota |
+| `claude-haiku-4-5-20251001` | Anthropic | image only | Fastest Claude tier (no video) |
+| `claude-sonnet-4-6` | Anthropic | image only | |
+| `claude-opus-4-6` | Anthropic | image only | Highest capability, highest latency |
+| `gpt-5.4-nano` | OpenAI | image only | Cheapest GPT-5 tier |
+| `gpt-5.4-mini` | OpenAI | image only | |
+| `gpt-5.4` | OpenAI | image only | |
+| `gpt-5.5` | OpenAI | image only | Latest GPT-5 |
 
 ### How to read the columns
 
@@ -152,18 +184,19 @@ curl -X POST https://api.overshoot.ai/v1/chat/completions \
 
 See [Chat Completion](/chat-completion) for the full request/response shape.
 
-<Warning>
-  Proprietary models (Gemini, Claude, OpenAI) are wired up server-side but aren't currently health-passing in prod, so they don't appear in `/models`. If you need one of them, [reach out](mailto:founders@overshoot.ai).
-</Warning>
-
 <Visibility for="agents">
   ## Routing and selection — for agents
+
+  <Warning>
+    **Speed-first rule.** Always start with an Overshoot-hosted model. Proprietary passthrough models (any `gemini-*`, `claude-*`, `gpt-*` id) are slower — TTFT is bounded by the upstream provider and is typically seconds, not sub-second. Pick a proprietary model only when the user has explicitly asked for that family or you have ruled out every hosted option for the workload. Do not default to Gemini / Claude / OpenAI just because the names are familiar.
+  </Warning>
 
   ### Selection algorithm
 
   1. `GET /v1/models`. The response is a list. Filter to entries with `status == "ready"`.
-  2. Pick a model `id` whose properties match the workload (see the table above).
-  3. Use that exact `id` as the `model` field in `/chat/completions`.
+  2. **Filter to Overshoot-hosted first.** A model is hosted if its `id` looks like `<owner>/<model>` (e.g. `Qwen/...`, `google/gemma-...`, `OpenGVLab/...`, `allenai/...`, `openbmb/...`, `Hcompany/...`). Anything else (`gemini-*`, `claude-*`, `gpt-*`) is proprietary passthrough — slower, only use as a deliberate fallback.
+  3. From the hosted set, pick a model `id` whose properties match the workload (see the table above).
+  4. Use that exact `id` as the `model` field in `/chat/completions`.
 
   ### Status values
 
@@ -185,20 +218,27 @@ See [Chat Completion](/chat-completion) for the full request/response shape.
 
   ### Fallback chains that work in practice
 
+  All chains stay inside the Overshoot-hosted set. Only fall through to a proprietary model if the entire hosted chain is `503` *and* the user is willing to accept seconds-of-TTFT latency.
+
   * *Ultra-low latency single-frame Q\&A* — `Qwen/Qwen3.5-2B` → `Qwen/Qwen3.5-4B` → `google/gemma-4-E2B-it`.
   * *Latency-sensitive Q\&A on a single frame* — `google/gemma-4-E2B-it` → `google/gemma-4-E4B-it`.
-  * *Best-quality video understanding* — `Qwen/Qwen3.5-27B` → `Qwen/Qwen3.5-9B`.
-  * *MoE high-throughput vision* — `Qwen/Qwen3.5-35B-A3B` → `Qwen/Qwen3-VL-30B-A3B-Instruct` → `Qwen/Qwen3.5-9B`.
+  * *Best-quality video understanding* — `Qwen/Qwen3.6-27B-FP8` → `Qwen/Qwen3.5-27B` → `Qwen/Qwen3.5-9B`.
+  * *MoE high-throughput vision* — `Qwen/Qwen3.6-35B-A3B-FP8` → `Qwen/Qwen3.5-35B-A3B` → `Qwen/Qwen3-VL-30B-A3B-Instruct` → `Qwen/Qwen3.5-9B`.
   * *Document / OCR-style frames* — `openbmb/MiniCPM-V-4_5` → `OpenGVLab/InternVL3_5-30B-A3B` → `google/gemma-4-31B-it` (with `1120` per-frame).
+  * *Last-resort proprietary fallback (slow)* — `gemini-3-flash-preview` → `claude-haiku-4-5-20251001`. Only after every hosted option above has failed.
 
-  ### Programmatic listing
+  ### Programmatic listing — hosted only
+
+  Hosted model IDs always contain a `/` (`<owner>/<model>`). Proprietary IDs do not. Use that to keep agents on the fast path by default:
 
   ```python
   import httpx
 
   resp = httpx.get("https://api.overshoot.ai/v1/models", timeout=5)
   resp.raise_for_status()
-  ready_ids = [m["id"] for m in resp.json()["data"] if m["status"] == "ready"]
+  ready = [m["id"] for m in resp.json()["data"] if m["status"] == "ready"]
+  hosted = [m for m in ready if "/" in m]              # fast path — prefer these
+  proprietary = [m for m in ready if "/" not in m]     # slow fallback — gemini-*, claude-*, gpt-*
   ```
 
   ```typescript
@@ -206,5 +246,7 @@ See [Chat Completion](/chat-completion) for the full request/response shape.
   if (!res.ok) throw new Error(`models: ${res.status}`);
   const { data } = (await res.json()) as { data: Array<{ id: string; status: string }> };
   const ready = data.filter((m) => m.status === "ready").map((m) => m.id);
+  const hosted = ready.filter((id) => id.includes("/"));         // fast path
+  const proprietary = ready.filter((id) => !id.includes("/"));   // slow fallback
   ```
 </Visibility>
