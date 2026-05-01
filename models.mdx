@@ -61,12 +61,15 @@ The response is OpenAI-compatible — same shape `listModels` returns, with one 
 ## Active models
 
 <Info>
-  Snapshot as of **2026-04-30**. The `/models` endpoint is the source of truth — treat this table as a quick reference, not a guarantee.
+  Snapshot as of **2026-05-01**. The `/models` endpoint is the source of truth — treat this table as a quick reference, not a guarantee.
 </Info>
 
 | Model | Provider | Context | Tokens / frame | Max frames |
 | --- | --- | --- | --- | --- |
+| `Qwen/Qwen3-VL-8B-Instruct` | Qwen | 32K | ~200 @ 480p | Capped by context |
 | `Qwen/Qwen3-VL-30B-A3B-Instruct` | Qwen | 32K | ~200 @ 480p | Capped by context |
+| `Qwen/Qwen3.5-2B` | Qwen | 32K | ~200 @ 480p | Capped by context |
+| `Qwen/Qwen3.5-4B` | Qwen | 32K | ~200 @ 480p | Capped by context |
 | `Qwen/Qwen3.5-9B` | Qwen | 32K | ~200 @ 480p | Capped by context |
 | `Qwen/Qwen3.5-27B` | Qwen | 32K | ~200 @ 480p | Capped by context |
 | `Qwen/Qwen3.5-35B-A3B` | Qwen | 16K | ~200 @ 480p | Capped by context (16K) |
@@ -74,6 +77,9 @@ The response is OpenAI-compatible — same shape `listModels` returns, with one 
 | `google/gemma-4-26B-A4B-it` | Google | 256K | 70 / 140 / 280 / 560 / 1120 | ~60 (1 fps × 60 s) |
 | `google/gemma-4-E4B-it` | Google | 128K | 70 / 140 / 280 / 560 / 1120 | ~60 (1 fps × 60 s) |
 | `google/gemma-4-E2B-it` | Google | 128K | 70 / 140 / 280 / 560 / 1120 | ~60 (1 fps × 60 s) |
+| `OpenGVLab/InternVL3_5-30B-A3B` | OpenGVLab | 32K | varies (see model card) | Capped by context |
+| `allenai/Molmo2-8B` | AI2 | 32K | varies (see model card) | Capped by context |
+| `openbmb/MiniCPM-V-4_5` | OpenBMB | 32K | varies (see model card) | Capped by context |
 | `Hcompany/Holo3-35B-A3B` | H Company | 16K | ~200 @ 480p | Capped by context (16K) |
 
 ### How to read the columns
@@ -108,8 +114,12 @@ The response is OpenAI-compatible — same shape `listModels` returns, with one 
     Default is 256 tokens.
   </Accordion>
 
+  <Accordion title="Tokens / frame — InternVL, Molmo2, MiniCPM-V" icon="cubes">
+    These models use their own image processors with different per-frame budgets. Per-frame token counts depend on dynamic tiling and resolution — check the upstream model card for specifics. As a rough planning number, expect a few hundred tokens per frame at 480p, scaling up with resolution.
+  </Accordion>
+
   <Accordion title="Max frames" icon="film">
-    - **Qwen** — no hard model-side cap. Frame count is bounded by context. The practical limit is `(context − text_input − text_output) / tokens_per_frame`.
+    - **Qwen / InternVL / Molmo2 / MiniCPM-V / Holo3** — no hard model-side cap. Frame count is bounded by context. The practical limit is `(context − text_input − text_output) / tokens_per_frame`.
     - **Gemma 4** — Google documents 60 s at 1 fps as the supported envelope (~60 frames).
   </Accordion>
 
@@ -175,9 +185,11 @@ See [Chat Completion](/chat-completion) for the full request/response shape.
 
   ### Fallback chains that work in practice
 
+  * *Ultra-low latency single-frame Q\&A* — `Qwen/Qwen3.5-2B` → `Qwen/Qwen3.5-4B` → `google/gemma-4-E2B-it`.
   * *Latency-sensitive Q\&A on a single frame* — `google/gemma-4-E2B-it` → `google/gemma-4-E4B-it`.
   * *Best-quality video understanding* — `Qwen/Qwen3.5-27B` → `Qwen/Qwen3.5-9B`.
-  * *MoE high-throughput vision* — `Qwen/Qwen3.5-35B-A3B` → `Qwen/Qwen3.5-9B`.
+  * *MoE high-throughput vision* — `Qwen/Qwen3.5-35B-A3B` → `Qwen/Qwen3-VL-30B-A3B-Instruct` → `Qwen/Qwen3.5-9B`.
+  * *Document / OCR-style frames* — `openbmb/MiniCPM-V-4_5` → `OpenGVLab/InternVL3_5-30B-A3B` → `google/gemma-4-31B-it` (with `1120` per-frame).
 
   ### Programmatic listing
 
