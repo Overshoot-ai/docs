@@ -64,24 +64,6 @@ Almost all inference providers today provide Chat Completion inference endpoints
 
 <Accordion title="Example of Chat Completion request using OpenAI python library">
   ```python
-  from openai import OpenAI
-  
-  client = OpenAI(
-      api_key="ovs-...",
-      base_url="https://api.overshoot.ai/v1beta"
-  )
-  
-  response = client.chat.completions.create(
-      model="google/gemma-4-E4B-it",
-      messages=[
-          {"role": "system", "content": "You are a helpful assistant."},
-          {"role": "user", "content": "What is the capital of France?"},
-          {"role": "assistant", "content": "The capital of France is Paris."},
-          {"role": "user", "content": "How about Morocco?"},
-      ],
-  )
-  
-  print(response.choices[0].message.content)
   ```
 </Accordion>
 
