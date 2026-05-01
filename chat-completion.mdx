@@ -63,8 +63,6 @@ A Chat Completion Request contains primarily two attributes:
 Almost all inference providers today provide Chat Completion inference endpoints. You can either call it over raw HTTP or using the `openai` SDK.
 
 <Accordion title="Example of Chat Completion request using OpenAI python library">
-  ```python
-  ```
 </Accordion>
 
 When the inference provider receives the request, they use the model's [chat template](https://huggingface.co/docs/transformers/en/chat_templating) to turn it into a single string and tokenize it. In the example above, the inference provider will respond with "Rabat".
