@@ -80,7 +80,7 @@ The response is OpenAI-compatible — same shape `listModels` returns, with one 
 
 <AccordionGroup>
   <Accordion title="Context — served vs native" icon="ruler">
-    **Served** is the context length we run the model with. 
+    **Served** is the context length we run the model with.
   </Accordion>
 
   <Accordion title="Tokens / frame — Qwen models" icon="image">
@@ -109,7 +109,7 @@ The response is OpenAI-compatible — same shape `listModels` returns, with one 
   </Accordion>
 
   <Accordion title="Max frames" icon="film">
-    - **Qwen** — no hard model-side cap. The binding limit is `served_context / tokens_per_frame` minus prompt \+ output budget.
+    - **Qwen** — no hard model-side cap. Frame count is bounded by context. The practical limit is `(context − text_input − text_output) / tokens_per_frame`.
     - **Gemma 4** — Google documents 60 s at 1 fps as the supported envelope (~60 frames).
   </Accordion>
 

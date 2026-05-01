@@ -3,54 +3,39 @@ title: "Glossary"
 description: "Canonical definitions for Overshoot terms used across the docs and API."
 ---
 
-Use these terms consistently when reading or writing about Overshoot. The
-source of truth for the wire format is
-[`api-reference/openapi.yaml`](/api-reference/introduction).
+Use these terms consistently when reading or writing about Overshoot. The source of truth for the wire format is [`api-reference/openapi.yaml`](/api-reference/introduction).
 
 ## Stream
 
-A leased live-video session. A Stream holds the most recent window of frames
-your client publishes (up to roughly 10 minutes of buffer) and exposes them
-to vision-language models through the `ovs://` URI scheme.
+A leased live-video session. A Stream holds the most recent window of frames your client publishes (up to roughly 10 minutes of buffer) and exposes them to vision-language models through the `ovs://` URI scheme.
 
 - Created by [`POST /streams`](/api-reference/create-stream).
 - Inspected by [`GET /streams/{stream_id}`](/api-reference/get-stream).
 - Renewed by [`POST /streams/{stream_id}/keepalive`](/api-reference/keepalive-stream).
 - Deleted by [`DELETE /streams/{stream_id}`](/api-reference/delete-stream).
 
-A Stream ends when the lease expires (5 minutes idle), the client deletes
-it, or the platform reaps it. See [The Stream](/the-stream) for the full
-lifecycle.
+A Stream ends when the lease expires (5 minutes idle), the client deletes it, or the platform reaps it. See [The Stream](/the-stream) for the full lifecycle.
 
 ## `stream_id`
 
-UUID returned by `POST /streams`. Use this exact spelling in prose and code
-— not "streamId" or "stream ID". Pass it as a path parameter on stream
-endpoints and as part of the `ovs://` URI.
+UUID returned by `POST /streams`. Use this exact spelling in prose and code — not `"streamId"` or `"stream ID".` Pass it as a path parameter on stream endpoints and as part of the `ovs://` URI.
 
 ## Frame
 
-A single image extracted from the publisher's video track and stored in the
-Stream's buffer. Reference an individual frame from chat completions with
-`frame_index` (see below).
+A single image extracted from the publisher's video track and stored in the Stream's buffer. Reference an individual frame from chat completions with `frame_index` (see below).
 
 ## `frame_index`
 
 Integer index into a Stream's retained frames.
 
-- `frame_index=-1` — the most recent frame (typical for "what's happening
-  right now").
-- `frame_index=0` — the first frame still retained in the buffer (older
-  frames are evicted).
+- `frame_index=-1` — the most recent frame (typical for "what's happening right now").
+- `frame_index=0` — the first frame still retained in the buffer (older frames are evicted).
 
-Returned values include `last_frame_index`, `first_available_frame_index`,
-`retained_frame_count`, and `evicted_frame_count` from
-[`GET /streams/{stream_id}`](/api-reference/get-stream).
+Returned values include `last_frame_index`, `first_available_frame_index`, `retained_frame_count`, and `evicted_frame_count` from [`GET /streams/{stream_id}`](/api-reference/get-stream).
 
 ## Segment
 
-A time-bounded slice of a Stream, referenced via `start_offset_ms` and
-optionally `end_offset_ms`.
+A time-bounded slice of a Stream, referenced via `start_offset_ms` and optionally `end_offset_ms`.
 
 - `start_offset_ms=-5000` means "5 seconds ago relative to the live edge".
 - `start_offset_ms=0` means "the start of the available buffer".
@@ -58,53 +43,37 @@ optionally `end_offset_ms`.
 
 ## `ovs://` URI
 
-Overshoot's stream-reference URI scheme. Used inside `image_url` or
-`video_url` content parts on `/chat/completions`.
+Overshoot's stream-reference URI scheme. Used inside `image_url` or `video_url` content parts on `/chat/completions`.
 
 - Frame: `ovs://streams/{stream_id}?frame_index=-1`
 - Segment: `ovs://streams/{stream_id}?start_offset_ms=-5000`
 - Bounded segment: `ovs://streams/{stream_id}?start_offset_ms=0&end_offset_ms=10000`
 
-The `ovs://` URI is a reference identifier the server parses to extract
-`stream_id` and the query — it is not a fetchable URL. See
-[Chat Completion](/chat-completion) for examples.
+The `ovs://` URI is a reference identifier the server parses to extract `stream_id` and the query — it is not a fetchable URL. See [Chat Completion](/chat-completion) for examples.
 
 ## Lease
 
-The keepalive window for a Stream. Default is 5 minutes from the most recent
-keepalive (or stream creation). When the lease expires, the Stream is
-deleted.
+The keepalive window for a Stream. Default is 5 minutes from the most recent keepalive (or stream creation). When the lease expires, the Stream is deleted.
 
 ## Keepalive
 
-The act of renewing a Stream's lease. Call
-[`POST /streams/{stream_id}/keepalive`](/api-reference/keepalive-stream)
-roughly every 2 minutes while the Stream is in use. Each keepalive returns
-a fresh LiveKit token you can use to rejoin the room if your publisher
-disconnects.
+The act of renewing a Stream's lease. Call [`POST /streams/{stream_id}/keepalive`](/api-reference/keepalive-stream) roughly every 2 minutes while the Stream is in use. Each keepalive returns a fresh LiveKit token you can use to rejoin the room if your publisher disconnects.
 
 ## Model id
 
-The string you pass as the `model` field on `/chat/completions`. Format is
-`provider/model-name`:
+The string you pass as the `model` field on `/chat/completions`. Format is `provider/model-name`:
 
 - `Qwen/Qwen3.5-9B`
 - `Qwen/Qwen3-VL-30B-A3B-Instruct`
 - `google/gemma-4-E4B-it`
 - `Hcompany/Holo3-35B-A3B`
 
-List currently-ready model ids with [`GET /models`](/api-reference/list-models)
-or browse the [Models page](/models).
+List currently-ready model ids with [`GET /models`](/api-reference/list-models) or browse the [Models page](/models).
 
 ## LiveKit room
 
-The WebRTC publish target returned by `POST /streams`. Comprises a `wss://`
-URL and a short-lived JWT token. Connect with any
-[LiveKit SDK](https://docs.livekit.io/reference/) to publish your video
-track. Overshoot's media gateway is the only other participant in the room.
+The WebRTC publish target returned by `POST /streams`. Comprises a `wss://` URL and a short-lived JWT token. Connect with any [LiveKit SDK](https://docs.livekit.io/reference/) to publish your video track. Overshoot's media gateway is the only other participant in the room.
 
 ## API key
 
-Bearer token used to authenticate requests. Prefixed with `ovs-`. Issued
-from the [Overshoot dashboard](https://overshoot.ai/dashboard). Only
-[`GET /models`](/api-reference/list-models) is unauthenticated.
+Bearer token used to authenticate requests. Prefixed with `ovs-`. Issued from the [Overshoot dashboard](https://overshoot.ai/dashboard). Only [`GET /models`](/api-reference/list-models) is unauthenticated.

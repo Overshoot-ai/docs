@@ -1,13 +1,13 @@
 ---
 title: "Chat Completion"
-description: "Use an OpenAI-compatible request to interact with your stream. Reference any moment: a single frame, a window, several windows by URL"
+description: "Use an OpenAI-compatible request to interact with your stream. Reference any moment by URL: a single frame, a window, or several windows."
 ---
 
 ## Intro
 
-If you’re familiar with the Chat Completion API, feel free to skip to the next section.
+If you're familiar with the Chat Completion API, feel free to skip to the next section.
 
-Let’s take a minute here to cover the Chat Completion API. This API is the building block of almost all AI applications today.
+The Chat Completion API is the building block of almost every AI application today. Quick refresher:
 
 A Chat Completion Request contains primarily two attributes:
 
@@ -17,56 +17,75 @@ A Chat Completion Request contains primarily two attributes:
 <Accordion title="Example of Chat Completion request">
   ```json request.json
   {
-  "model": "google/gemma-4-E4B-it",
-  "messages": [
-   {
-     "role": "system",
-     "content": [
-       {
-         "type": "text",
-         "text": "You are a helpful assistant"
-       }
-     ]
-   },
-   {
-     "role": "user",
-     "content": [
-       {
-         "type": "text",
-         "text": "what is the capital of france?"
-       }
-     ]
-   },
-   {
-     "role": "assistant",
-     "content": [
-       {
-         "type": "text",
-         "text": "the capital of france is paris."
-       }
-     ]
-   },
-   {
-     "role": "user",
-     "content": [
-       {
-         "type": "text",
-         "text": "how about morocco?"
-       }
-     ]
-   }
-  ]
+    "model": "google/gemma-4-E4B-it",
+    "messages": [
+      {
+        "role": "system",
+        "content": [
+          {
+            "type": "text",
+            "text": "You are a helpful assistant."
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "What is the capital of France?"
+          }
+        ]
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "The capital of France is Paris."
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "How about Morocco?"
+          }
+        ]
+      }
+    ]
   }
-  
   ```
 </Accordion>
 
 Almost all inference providers today provide Chat Completion inference endpoints. You can either call it over raw HTTP or using the `openai` SDK.
 
 <Accordion title="Example of Chat Completion request using OpenAI python library">
+  ```python
+  from openai import OpenAI
+  
+  client = OpenAI(
+      api_key="ovs-...",
+      base_url="https://api.overshoot.ai/v1beta"
+  )
+  
+  response = client.chat.completions.create(
+      model="google/gemma-4-E4B-it",
+      messages=[
+          {"role": "system", "content": "You are a helpful assistant."},
+          {"role": "user", "content": "What is the capital of France?"},
+          {"role": "assistant", "content": "The capital of France is Paris."},
+          {"role": "user", "content": "How about Morocco?"},
+      ],
+  )
+  
+  print(response.choices[0].message.content)
+  ```
 </Accordion>
 
-When the inference provider receives the request, they use the models' [chat template](https://huggingface.co/docs/transformers/en/chat_templating) to turn it into a single string and tokenize it. In the example above, the inference provider will respond with "Rabat".
+When the inference provider receives the request, they use the model's [chat template](https://huggingface.co/docs/transformers/en/chat_templating) to turn it into a single string and tokenize it. In the example above, the inference provider will respond with "Rabat".
 
 For Vision Language Models (VLM), image and video data can be passed in the message content in the form of bytes or URLs.
 
@@ -83,7 +102,7 @@ For Vision Language Models (VLM), image and video data can be passed in the mess
 		{
 			"type": "video_url",
 			"video_url": {
-				"url": "<https://example.com/video.mp4>"
+				"url": "https://example.com/video.mp4"
 			}
 		}
 	]
@@ -127,7 +146,7 @@ When you create a stream and connect it to your camera source, Overshoot allows 
 }
 ```
 
-- Use `type=video_url` to refer to a segment in the video. Unlike the frame, a video segment must have a `start` and `end` . If no `end` is specified, we default to `now` . For example, to refer to the last 5 seconds of the stream,
+- Use `type=video_url` to refer to a segment in the video. Unlike the frame, a video segment must have a `start` and `end` . If no `end` is specified, we default to `now`. For example, to refer to the last 5 seconds of the stream,
 
 ```json wrap
 {"type": "video_url", "video_url": {"url": "ovs://streams/{stream_id}?start_offset_ms=-5000"}}
@@ -136,7 +155,7 @@ When you create a stream and connect it to your camera source, Overshoot allows 
 - To look at the first 5 minutes of the stream, use `start_offset_ms` instead.
 
 ```json wrap
-{"type": "video_url", "video_url": {"url": "ovs://streams/{stream_id}?start_offset_ms=0&end_offset_ms=10000"}}
+{"type": "video_url", "video_url": {"url": "ovs://streams/{stream_id}?start_offset_ms=0&end_offset_ms=300000"}}
 ```
 
 The mental model here is that when you create a `Stream` , Overshoot gives you a handle to reference any part (or all) of the stream in any conversation with any model.

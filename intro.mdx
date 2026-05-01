@@ -2,29 +2,39 @@
 title: "Welcome to Overshoot"
 ---
 
-Overshoot enables developers to build realtime vision applications in two steps: 
+Overshoot enables developers to build realtime vision applications in two steps:
 
-- Create a `/stream` session and connect a live video source to it 
-- Ask any model about any moment of the video stream via `/chat/completion` request
+- Create a `/streams` session and connect a live video source to it
+- Ask any model about any moment of the video stream via `/chat/completions` request
 
-That's it. 2 HTTP stateless endpoints is all you need to build anything. 
+That's it. 2 HTTP stateless endpoints is all you need to build anything.
 
-If you can't bother to read the documentation, here's what you need to know: 
+If you can't be bothered to read the documentation, here's what you need to know:
 
-1. When you create a [Stream](/the-stream) , you get back a `Stream ID`, a LiveKit Room URL with a token. Use a LiveKit SDK to publish your video stream in the room. 
-2. Once a [Stream](/the-stream) is connected, you can refer to parts or all of of it inside your OpenAI Compatible [Chat Completion](/chat-completion) request. 
-   - To refer to single frames, pass them as `image_url` inside the [message content](https://developers.openai.com/api/reference/resources/chat#\(resource\)%20chat.completions%20%3E%20\(model\)%20chat_completion_content_part%20%3E%20\(schema\)). 
+1. When you create a [Stream](/the-stream) , you get back a `Stream ID`, a LiveKit Room URL with a token. Use a LiveKit SDK to publish your video stream in the room.
+2. Once a [Stream](/the-stream) is connected, you can refer to parts or all of it inside your OpenAI Compatible [Chat Completion](/chat-completion) request.
+   - To refer to single frames, pass them as `image_url` inside the [message content](https://developers.openai.com/api/reference/resources/chat#\(resource\)%20chat.completions%20%3E%20\(model\)%20chat_completion_content_part%20%3E%20\(schema\)).
    ```json
    // last frame
-   {"type": "image_url", "url": "ovs://streams/{stream_id}?frame_inded=-1"}
+   {
+     "type": "image_url",
+     "image_url": {
+       "url": "ovs://streams/{stream_id}?frame_index=-1"
+     }
+   }
    ```
-   - Similarly, to refer to segments in the livestream, pass them as `video_url`
+   - Similarly, to refer to segments in the live stream, pass them as `video_url`
    ```json
    // last 5 seconds
-   {"type": "video_url", "url": "ovs://streams/{stream_id}?start_offset_ms=-5000"}
+   {
+     "type": "video_url",
+     "video_url": {
+       "url": "ovs://streams/{stream_id}?start_offset_ms=-5000"
+     }
+   }
    ```
 
-Hope this make sense. 
+Hope this makes sense.
 
 Enjoy!
 
