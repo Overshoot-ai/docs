@@ -40,14 +40,14 @@ The response is OpenAI-compatible — same shape `listModels` returns, with one 
     "object": "list",
     "data": [
       {
-        "id": "Qwen/Qwen3.5-9B",
+        "id": "Qwen/Qwen3.6-27B-FP8",
         "object": "model",
         "created": 1714492800,
         "owned_by": "overshoot",
         "status": "ready"
       },
       {
-        "id": "google/gemma-4-E4B-it",
+        "id": "google/gemma-4-31B-it",
         "object": "model",
         "created": 1714492800,
         "owned_by": "overshoot",
@@ -72,22 +72,10 @@ These are the fast path. We run them on our own GPUs, sized for sub-second time-
 
 | Model | Provider | Context | Tokens / frame | Max frames |
 | --- | --- | --- | --- | --- |
-| `Qwen/Qwen3-VL-8B-Instruct` | Qwen | 32K | ~200 @ 480p | Capped by context |
-| `Qwen/Qwen3-VL-30B-A3B-Instruct` | Qwen | 32K | ~200 @ 480p | Capped by context |
-| `Qwen/Qwen3.5-2B` | Qwen | 32K | ~200 @ 480p | Capped by context |
-| `Qwen/Qwen3.5-4B` | Qwen | 32K | ~200 @ 480p | Capped by context |
-| `Qwen/Qwen3.5-9B` | Qwen | 32K | ~200 @ 480p | Capped by context |
-| `Qwen/Qwen3.5-27B` | Qwen | 32K | ~200 @ 480p | Capped by context |
-| `Qwen/Qwen3.5-35B-A3B` | Qwen | 16K | ~200 @ 480p | Capped by context (16K) |
 | `Qwen/Qwen3.6-27B-FP8` | Qwen | 32K | ~200 @ 480p | Capped by context |
 | `Qwen/Qwen3.6-35B-A3B-FP8` | Qwen | 16K | ~200 @ 480p | Capped by context (16K) |
 | `google/gemma-4-31B-it` | Google | 256K | 70 / 140 / 280 / 560 / 1120 | ~60 (1 fps × 60 s) |
 | `google/gemma-4-26B-A4B-it` | Google | 256K | 70 / 140 / 280 / 560 / 1120 | ~60 (1 fps × 60 s) |
-| `google/gemma-4-E4B-it` | Google | 128K | 70 / 140 / 280 / 560 / 1120 | ~60 (1 fps × 60 s) |
-| `google/gemma-4-E2B-it` | Google | 128K | 70 / 140 / 280 / 560 / 1120 | ~60 (1 fps × 60 s) |
-| `OpenGVLab/InternVL3_5-30B-A3B` | OpenGVLab | 32K | varies (see model card) | Capped by context |
-| `allenai/Molmo2-8B` | AI2 | 32K | varies (see model card) | Capped by context |
-| `openbmb/MiniCPM-V-4_5` | OpenBMB | 32K | varies (see model card) | Capped by context |
 | `Hcompany/Holo3-35B-A3B` | H Company | 16K | ~200 @ 480p | Capped by context (16K) |
 
 ### Proprietary passthrough
@@ -100,11 +88,7 @@ These are upstream APIs we expose through the same OpenAI-compatible surface for
 
 | Model | Upstream | Modalities | Notes |
 | --- | --- | --- | --- |
-| `gemini-2.5-flash-lite` | Google Gemini | image, video | Highest-throughput Gemini tier |
-| `gemini-2.5-flash` | Google Gemini | image, video | |
-| `gemini-2.5-pro` | Google Gemini | image, video | Strongest reasoning in the 2.5 line |
-| `gemini-3-flash-preview` | Google Gemini | image, video | |
-| `gemini-3.1-flash-lite-preview` | Google Gemini | image, video | |
+| `gemini-3-flash-preview` | Google Gemini | image, video | Fast Gemini tier |
 | `gemini-3.1-pro-preview` | Google Gemini | image, video | Frontier reasoning, lowest RPM quota |
 | `claude-haiku-4-5-20251001` | Anthropic | image only | Fastest Claude tier (no video) |
 | `claude-sonnet-4-6` | Anthropic | image only | |
@@ -112,7 +96,6 @@ These are upstream APIs we expose through the same OpenAI-compatible surface for
 | `gpt-5.4-nano` | OpenAI | image only | Cheapest GPT-5 tier |
 | `gpt-5.4-mini` | OpenAI | image only | |
 | `gpt-5.4` | OpenAI | image only | |
-| `gpt-5.5` | OpenAI | image only | Latest GPT-5 |
 
 ### How to read the columns
 
@@ -122,7 +105,7 @@ These are upstream APIs we expose through the same OpenAI-compatible surface for
   </Accordion>
 
   <Accordion title="Tokens / frame — Qwen models" icon="image">
-    Qwen3.5 and Qwen3-VL share the same processor: patch 16, `temporal_patch_size=2`, `spatial_merge_size=2`. The formula:
+    Qwen3.6 uses the same image processor as the Qwen3 line: patch 16, `temporal_patch_size=2`, `spatial_merge_size=2`. The formula:
 
     ```text
     tokens_per_frame ≈ (H × W) / 2048
@@ -146,12 +129,8 @@ These are upstream APIs we expose through the same OpenAI-compatible surface for
     Default is 256 tokens.
   </Accordion>
 
-  <Accordion title="Tokens / frame — InternVL, Molmo2, MiniCPM-V" icon="cubes">
-    These models use their own image processors with different per-frame budgets. Per-frame token counts depend on dynamic tiling and resolution — check the upstream model card for specifics. As a rough planning number, expect a few hundred tokens per frame at 480p, scaling up with resolution.
-  </Accordion>
-
   <Accordion title="Max frames" icon="film">
-    - **Qwen / InternVL / Molmo2 / MiniCPM-V / Holo3** — no hard model-side cap. Frame count is bounded by context. The practical limit is `(context − text_input − text_output) / tokens_per_frame`.
+    - **Qwen / Holo3** — no hard model-side cap. Frame count is bounded by context. The practical limit is `(context − text_input − text_output) / tokens_per_frame`.
     - **Gemma 4** — Google documents 60 s at 1 fps as the supported envelope (~60 frames).
   </Accordion>
 
@@ -169,7 +148,7 @@ curl -X POST https://api.overshoot.ai/v1/chat/completions \
   -H "Authorization: Bearer $OVERSHOOT_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "Qwen/Qwen3.5-9B",
+    "model": "Qwen/Qwen3.6-27B-FP8",
     "messages": [{
       "role": "user",
       "content": [
@@ -194,7 +173,7 @@ See [Chat Completion](/chat-completion) for the full request/response shape.
   ### Selection algorithm
 
   1. `GET /v1/models`. The response is a list. Filter to entries with `status == "ready"`.
-  2. **Filter to Overshoot-hosted first.** A model is hosted if its `id` looks like `<owner>/<model>` (e.g. `Qwen/...`, `google/gemma-...`, `OpenGVLab/...`, `allenai/...`, `openbmb/...`, `Hcompany/...`). Anything else (`gemini-*`, `claude-*`, `gpt-*`) is proprietary passthrough — slower, only use as a deliberate fallback.
+  2. **Filter to Overshoot-hosted first.** A model is hosted if its `id` looks like `<owner>/<model>` (e.g. `Qwen/...`, `google/gemma-...`, `Hcompany/...`). Anything else (`gemini-*`, `claude-*`, `gpt-*`) is proprietary passthrough — slower, only use as a deliberate fallback.
   3. From the hosted set, pick a model `id` whose properties match the workload (see the table above).
   4. Use that exact `id` as the `model` field in `/chat/completions`.
 
@@ -220,11 +199,10 @@ See [Chat Completion](/chat-completion) for the full request/response shape.
 
   All chains stay inside the Overshoot-hosted set. Only fall through to a proprietary model if the entire hosted chain is `503` *and* the user is willing to accept seconds-of-TTFT latency.
 
-  * *Ultra-low latency single-frame Q\&A* — `Qwen/Qwen3.5-2B` → `Qwen/Qwen3.5-4B` → `google/gemma-4-E2B-it`.
-  * *Latency-sensitive Q\&A on a single frame* — `google/gemma-4-E2B-it` → `google/gemma-4-E4B-it`.
-  * *Best-quality video understanding* — `Qwen/Qwen3.6-27B-FP8` → `Qwen/Qwen3.5-27B` → `Qwen/Qwen3.5-9B`.
-  * *MoE high-throughput vision* — `Qwen/Qwen3.6-35B-A3B-FP8` → `Qwen/Qwen3.5-35B-A3B` → `Qwen/Qwen3-VL-30B-A3B-Instruct` → `Qwen/Qwen3.5-9B`.
-  * *Document / OCR-style frames* — `openbmb/MiniCPM-V-4_5` → `OpenGVLab/InternVL3_5-30B-A3B` → `google/gemma-4-31B-it` (with `1120` per-frame).
+  * *Best-quality video understanding* — `Qwen/Qwen3.6-27B-FP8` → `google/gemma-4-31B-it`.
+  * *MoE high-throughput vision* — `Qwen/Qwen3.6-35B-A3B-FP8` → `google/gemma-4-26B-A4B-it`.
+  * *Document / OCR-style frames* — `google/gemma-4-31B-it` (with `1120` per-frame) → `google/gemma-4-26B-A4B-it` (with `1120` per-frame).
+  * *GUI / agent screenshots* — `Hcompany/Holo3-35B-A3B` → `Qwen/Qwen3.6-27B-FP8`.
   * *Last-resort proprietary fallback (slow)* — `gemini-3-flash-preview` → `claude-haiku-4-5-20251001`. Only after every hosted option above has failed.
 
   ### Programmatic listing — hosted only
