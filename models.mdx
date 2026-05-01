@@ -1,6 +1,6 @@
 ---
 title: "Models"
-description: "Vision-language models you can target from /chat/completions — context length, tokens per frame, frame limits."
+description: "Vision Language Models on Overshoot"
 ---
 
 Overshoot serves a curated set of vision-language models tuned for real-time inference. Pick one from the [picker](#picking-a-model), pass its `id` as the `model` field on `/chat/completions`, and Overshoot routes the request to a healthy endpoint.
@@ -64,91 +64,59 @@ The response is OpenAI-compatible — same shape `listModels` returns, with one 
   Snapshot as of **2026-04-30**. The `/models` endpoint is the source of truth — treat this table as a quick reference, not a guarantee.
 </Info>
 
-| Model | Provider | Context (served / native) | Tokens / frame | Interleaved text + video | Max frames |
-|---|---|---|---|---|---|
-| `Qwen/Qwen3-VL-30B-A3B-Instruct` | Qwen — open-weights, MoE 3B active | 32K / 256K (1M w/ YaRN) | ~200 @ 480p | Yes (Interleaved-MRoPE) | Capped by context |
-| `Qwen/Qwen3.5-9B` | Qwen — open-weights | 32K / 256K (1M w/ YaRN) | ~200 @ 480p | Yes | Capped by context |
-| `Qwen/Qwen3.5-27B` | Qwen — open-weights | 32K / 256K (1M w/ YaRN) | ~200 @ 480p | Yes | Capped by context |
-| `Qwen/Qwen3.5-35B-A3B` | Qwen — open-weights, MoE 3B active | 16K / 256K (1M w/ YaRN) | ~200 @ 480p | Yes | Capped by context (16K) |
-| `google/gemma-4-31B-it` | Google — open-weights | 256K | 70 / 140 / 280 / 560 / 1120 (per request) | Yes | ~60 (1 fps × 60 s) |
-| `google/gemma-4-26B-A4B-it` | Google — open-weights, MoE | 256K | 70 / 140 / 280 / 560 / 1120 | Yes | ~60 (1 fps × 60 s) |
-| `google/gemma-4-E4B-it` | Google — open-weights | 128K | 70 / 140 / 280 / 560 / 1120 | Yes | ~60 (1 fps × 60 s) |
-| `google/gemma-4-E2B-it` | Google — open-weights | 128K | 70 / 140 / 280 / 560 / 1120 | Yes | ~60 (1 fps × 60 s) |
-| `Hcompany/Holo3-35B-A3B` | H Company — Qwen3.5-35B-A3B fine-tune (GUI / agents) | 16K / 256K | ~200 @ 480p | Yes | Capped by context (16K) |
+| Model | Provider | Context | Tokens / frame | Max frames |
+| --- | --- | --- | --- | --- |
+| `Qwen/Qwen3-VL-30B-A3B-Instruct` | Qwen | 32K | ~200 @ 480p | Capped by context |
+| `Qwen/Qwen3.5-9B` | Qwen | 32K | ~200 @ 480p | Capped by context |
+| `Qwen/Qwen3.5-27B` | Qwen | 32K | ~200 @ 480p | Capped by context |
+| `Qwen/Qwen3.5-35B-A3B` | Qwen | 16K | ~200 @ 480p | Capped by context (16K) |
+| `google/gemma-4-31B-it` | Google | 256K | 70 / 140 / 280 / 560 / 1120 | ~60 (1 fps × 60 s) |
+| `google/gemma-4-26B-A4B-it` | Google | 256K | 70 / 140 / 280 / 560 / 1120 | ~60 (1 fps × 60 s) |
+| `google/gemma-4-E4B-it` | Google | 128K | 70 / 140 / 280 / 560 / 1120 | ~60 (1 fps × 60 s) |
+| `google/gemma-4-E2B-it` | Google | 128K | 70 / 140 / 280 / 560 / 1120 | ~60 (1 fps × 60 s) |
+| `Hcompany/Holo3-35B-A3B` | H Company | 16K | ~200 @ 480p | Capped by context (16K) |
 
 ### How to read the columns
 
 <AccordionGroup>
+  <Accordion title="Context — served vs native" icon="ruler">
+    **Served** is the context length we run the model with. 
+  </Accordion>
 
-<Accordion title="Context — served vs native" icon="ruler">
-  **Served** is the `--max-model-len` we run with. We cap below the model's native ceiling so the KV cache fits the GPU at our target concurrency. **Native** is what the model card claims. Where one number is shown, served == native.
-</Accordion>
+  <Accordion title="Tokens / frame — Qwen models" icon="image">
+    Qwen3.5 and Qwen3-VL share the same processor: patch 16, `temporal_patch_size=2`, `spatial_merge_size=2`. The formula:
 
-<Accordion title="Tokens / frame — Qwen models" icon="image">
-  Qwen3.5 and Qwen3-VL share the same processor: patch 16, `temporal_patch_size=2`, `spatial_merge_size=2`. The formula:
+    ```text
+    tokens_per_frame ≈ (H × W) / 2048
+    ```
 
-  ```
-  tokens_per_frame ≈ (H × W) / 2048
-  ```
+    | Resolution | Tokens / frame |
+    | --- | --- |
+    | 480p (854×480) | ~200 |
+    | 720p (1280×720) | ~450 |
+    | 1080p (1920×1080) | ~1010 |
 
-  | Resolution | Tokens / frame |
-  |---|---|
-  | 480p (854×480) | ~200 |
-  | 720p (1280×720) | ~450 |
-  | 1080p (1920×1080) | ~1010 |
+    Numbers in the table assume 480p — the resolution our benchmark suite uses. Higher resolutions consume context faster.
+  </Accordion>
 
-  Numbers in the table assume 480p — the resolution our benchmark suite uses. Higher resolutions consume context faster.
-</Accordion>
+  <Accordion title="Tokens / frame — Gemma 4" icon="sliders">
+    You pick the visual-token budget per request — `70`, `140`, `280`, `560`, or `1120`:
 
-<Accordion title="Tokens / frame — Gemma 4" icon="sliders">
-  You pick the visual-token budget per request — `70`, `140`, `280`, `560`, or `1120`:
+    - **70–280** — classification, captioning, video understanding.
+    - **560–1120** — OCR, document parsing, small text.
 
-  - **70–280** — classification, captioning, video understanding.
-  - **560–1120** — OCR, document parsing, small text.
+    Default is 256 tokens.
+  </Accordion>
 
-  Default is 256 tokens.
-</Accordion>
+  <Accordion title="Max frames" icon="film">
+    - **Qwen** — no hard model-side cap. The binding limit is `served_context / tokens_per_frame` minus prompt \+ output budget.
+    - **Gemma 4** — Google documents 60 s at 1 fps as the supported envelope (~60 frames).
+  </Accordion>
 
-<Accordion title="Max frames" icon="film">
-  - **Qwen** — no hard model-side cap. The binding limit is `served_context / tokens_per_frame` minus prompt + output budget.
-  - **Gemma 4** — Google documents 60 s at 1 fps as the supported envelope (~60 frames).
-</Accordion>
-
-<Accordion title="Interleaved text + video" icon="layer-group">
-  The model can mix text segments between visual tokens inside a single message — instead of forcing all visual content into one block followed by text. Every active model supports this.
-</Accordion>
-
+  <Accordion title="Interleaved text + video" icon="layer-group">
+    The model can mix text segments between visual tokens inside a single message — instead of forcing all visual content into one block followed by text. Every active model supports this.
+  </Accordion>
 </AccordionGroup>
-
-## Picking a model
-
-<CardGroup cols={2}>
-
-<Card title="Best overall quality" icon="trophy">
-  **`Qwen/Qwen3.5-27B`** — leads on video, coding, and instruction following.
-</Card>
-
-<Card title="High-throughput vision" icon="bolt">
-  **`Qwen/Qwen3.5-35B-A3B`** — near-27B vision quality at a fraction of the compute (MoE, 3B active per token).
-</Card>
-
-<Card title="Strong vision, moderate size" icon="scale-balanced">
-  **`Qwen/Qwen3.5-9B`** — recommended starting point. Beats last-gen 30B models on every vision benchmark.
-</Card>
-
-<Card title="Native temporal video grounding" icon="film">
-  **`Qwen/Qwen3-VL-30B-A3B-Instruct`** — Interleaved-MRoPE plus Text–Timestamp Alignment for second-level video reasoning.
-</Card>
-
-<Card title="GUI / computer-use agents" icon="arrow-pointer">
-  **`Hcompany/Holo3-35B-A3B`** — Qwen3.5-35B-A3B fine-tuned for navigation and computer-use tasks.
-</Card>
-
-<Card title="Long-context multimodal" icon="scroll">
-  **`google/gemma-4-31B-it`** — 256K context with a configurable per-frame token budget.
-</Card>
-
-</CardGroup>
 
 ## Use a model
 
@@ -179,54 +147,52 @@ See [Chat Completion](/chat-completion) for the full request/response shape.
 </Warning>
 
 <Visibility for="agents">
+  ## Routing and selection — for agents
 
-## Routing and selection — for agents
+  ### Selection algorithm
 
-### Selection algorithm
+  1. `GET /v1beta/models`. The response is a list. Filter to entries with `status == "ready"`.
+  2. Pick a model `id` whose properties match the workload (see the table above).
+  3. Use that exact `id` as the `model` field in `/chat/completions`.
 
-1. `GET /v1beta/models`. The response is a list. Filter to entries with `status == "ready"`.
-2. Pick a model `id` whose properties match the workload (see the table above).
-3. Use that exact `id` as the `model` field in `/chat/completions`.
+  ### Status values
 
-### Status values
+  | Status    | Meaning                                  | What to do                                        |
+  | --------- | ---------------------------------------- | ------------------------------------------------- |
+  | `ready`   | At least one healthy replica is serving. | Use it.                                           |
+  | `loading` | Replicas are coming up.                  | May become ready in seconds — don't depend on it. |
+  | (omitted) | Not currently serving.                   | Don't use; not in the response.                   |
 
-| Status | Meaning | What to do |
-|---|---|---|
-| `ready` | At least one healthy replica is serving. | Use it. |
-| `loading` | Replicas are coming up. | May become ready in seconds — don't depend on it. |
-| (omitted) | Not currently serving. | Don't use; not in the response. |
+  A model that's `ready` at list-time can return `503` at completion-time if the only replica fell over between calls. Always handle `503` with either a retry or a fallback to another `ready` model.
 
-A model that's `ready` at list-time can return `503` at completion-time if the only replica fell over between calls. Always handle `503` with either a retry or a fallback to another `ready` model.
+  ### Cost / latency tradeoff
 
-### Cost / latency tradeoff
+  Visual tokens dominate prompt size for video workloads. The relevant knobs:
 
-Visual tokens dominate prompt size for video workloads. The relevant knobs:
+  * **Resolution** — drop from 1080p to 480p and Qwen prompt tokens fall \~5×.
+  * **Frames** — half the frames = roughly half the tokens.
+  * **Per-frame budget (Gemma only)** — `70` is fine for "what's happening" questions; reserve `560`+ for OCR.
 
-- **Resolution** — drop from 1080p to 480p and Qwen prompt tokens fall ~5×.
-- **Frames** — half the frames = roughly half the tokens.
-- **Per-frame budget (Gemma only)** — `70` is fine for "what's happening" questions; reserve `560`+ for OCR.
+  ### Fallback chains that work in practice
 
-### Fallback chains that work in practice
+  * *Latency-sensitive Q\&A on a single frame* — `google/gemma-4-E2B-it` → `google/gemma-4-E4B-it`.
+  * *Best-quality video understanding* — `Qwen/Qwen3.5-27B` → `Qwen/Qwen3.5-9B`.
+  * *MoE high-throughput vision* — `Qwen/Qwen3.5-35B-A3B` → `Qwen/Qwen3.5-9B`.
 
-- *Latency-sensitive Q&A on a single frame* — `google/gemma-4-E2B-it` → `google/gemma-4-E4B-it`.
-- *Best-quality video understanding* — `Qwen/Qwen3.5-27B` → `Qwen/Qwen3.5-9B`.
-- *MoE high-throughput vision* — `Qwen/Qwen3.5-35B-A3B` → `Qwen/Qwen3.5-9B`.
+  ### Programmatic listing
 
-### Programmatic listing
+  ```python
+  import httpx
 
-```python
-import httpx
+  resp = httpx.get("https://api.overshoot.ai/v1beta/models", timeout=5)
+  resp.raise_for_status()
+  ready_ids = [m["id"] for m in resp.json()["data"] if m["status"] == "ready"]
+  ```
 
-resp = httpx.get("https://api.overshoot.ai/v1beta/models", timeout=5)
-resp.raise_for_status()
-ready_ids = [m["id"] for m in resp.json()["data"] if m["status"] == "ready"]
-```
-
-```typescript
-const res = await fetch("https://api.overshoot.ai/v1beta/models");
-if (!res.ok) throw new Error(`models: ${res.status}`);
-const { data } = (await res.json()) as { data: Array<{ id: string; status: string }> };
-const ready = data.filter((m) => m.status === "ready").map((m) => m.id);
-```
-
+  ```typescript
+  const res = await fetch("https://api.overshoot.ai/v1beta/models");
+  if (!res.ok) throw new Error(`models: ${res.status}`);
+  const { data } = (await res.json()) as { data: Array<{ id: string; status: string }> };
+  const ready = data.filter((m) => m.status === "ready").map((m) => m.id);
+  ```
 </Visibility>

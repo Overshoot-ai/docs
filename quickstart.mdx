@@ -1,159 +1,87 @@
 ---
 title: "Quickstart"
-description: "From a fresh API key to a model describing your webcam — in four steps."
+description: "Get started in four quick steps"
 ---
 
 <Steps>
-  <Step title="Get an API key">
-    <Card title="Open the dashboard" icon="key" horizontal href="https://platform.overshoot.ai">
-      Create a key. It'll start with `ovs-`.
+  <Step title="Authenticate">
+    <Card title="Get your API Key" icon="key" horizontal href="https://platform.overshoot.ai">
     </Card>
-
-    Export it for the rest of the steps:
-
-    ```shellscript
-    export OVERSHOOT_API_KEY="ovs-..."
-    ```
   </Step>
-
   <Step title="Create a stream">
+    We call the `/streams` endpoint to create a [Stream](/the-stream). 
+
     ```shellscript
     curl -X POST https://api.overshoot.ai/v1beta/streams \
-      -H "Authorization: Bearer $OVERSHOOT_API_KEY"
+    -H "Authorization: Bearer $OVERSHOOT_API_KEY"
     ```
 
-    The response carries a LiveKit room URL and a publishing token. Hold onto both.
+    The command above returns a Room URL and a Token. Save those for the next step. 
 
-    <Accordion title="Sample response">
+    <Accordion title="Sample Response">
       ```json focus={2,6-7}
       {
-        "id": "2ea5a604-d225-4cd2-82ac-b907cb0b4f63",
-        "state": "active",
-        "publish": {
-          "type": "livekit",
-          "url": "wss://livekit.overshoot.ai",
-          "token": "ey...k"
-        },
-        "expires_at_ms": 1777529931184,
-        "ttl_seconds": 300
+          "id": "2ea5a604-d225-4cd2-82ac-b907cb0b4f63",
+          "state": "active",
+          "publish": {
+              "type": "livekit",
+              "url": "wss://livekit.overshoot.ai",
+              "token": "ey...k"
+          },
+          "expires_at_ms": 1777529931184,
+          "ttl_seconds": 300
       }
       ```
     </Accordion>
   </Step>
-
-  <Step title="Connect your webcam">
-    Open [LiveKit Meet](https://meet.livekit.io/?tab=custom), paste the `url` and `token` from the previous response, and join. Your webcam is now publishing into the stream.
-
-    <Tip>
-      Want to do this in code? Any [LiveKit client SDK](https://docs.livekit.io/reference/) works — web, iOS, Android, server.
-    </Tip>
+  <Step title="Connect your webcam to the stream">
+    Use your Room URL and Token to connect your camera using [LiveKit Meet](https://meet.livekit.io/?tab=custom). You can also use your favorite [LiveKit SDK](https://docs.livekit.io/transport/sdk-platforms/) for this.
   </Step>
+  <Step title="Ask the model what it can see">
+    Once the camera is connect, send a simple [Chat Completion](/chat-completion) request to the model.
 
-  <Step title="Ask the model">
-    ```shellscript wrap
-    curl -X POST https://api.overshoot.ai/v1beta/chat/completions \
-      -H "Authorization: Bearer $OVERSHOOT_API_KEY" \
-      -H "Content-Type: application/json" \
-      -d '{
-        "model": "google/gemma-4-E4B-it",
-        "messages": [{
-          "role": "user",
-          "content": [
-            { "type": "text", "text": "What am I wearing?" },
-            { "type": "image_url", "image_url": {
-                "url": "ovs://streams/$STREAM_ID?frame_index=-1"
+    ```shellscript highlight={12} wrap
+    curl -X POST https://dev-api.overshoot.ai/v1beta/chat/completions \
+    -H "Authorization: Bearer $OVERSHOOT_API_KEY" \
+    -H "Content-Type: application/json" \
+    -d '{
+    "model": "google/gemma-4-E4B-it",
+    "messages": [
+        {
+        "role": "user",
+        "content": [
+            {"type": "text", "text": "What am I wearing?"},
+            {"type": "image_url", "image_url": {
+                "url": "https://dev-api.overshoot.ai/v1/streams/$STREAM_ID/media?frame_index=-1"
             }}
-          ]
-        }]
-      }'
+        ]
+        }]}'
     ```
 
-    `frame_index=-1` means "the latest frame Overshoot has indexed for this stream". Swap in `start_offset_ms=-5000` and a `video_url` content part to ask about the last five seconds instead.
-
-    <Accordion title="Sample response">
+    <Accordion title="Sample Response">
       ```json
       {
-        "id": "34225b75-abae-4c58-8191-2abdc8f437de",
-        "object": "chat.completion",
-        "created": 1777530304,
-        "model": "google/gemma-4-E4B-it",
-        "choices": [
-          {
-            "index": 0,
-            "message": {
-              "role": "assistant",
-              "content": "Plaid robe, t-shirt."
-            },
-            "finish_reason": "stop"
+          "id": "34225b75-abae-4c58-8191-2abdc8f437de",
+          "object": "chat.completion",
+          "created": 1777530304,
+          "model": "google/gemma-4-E4B-it",
+          "choices": [
+              {
+                  "index": 0,
+                  "message": {
+                      "role": "assistant",
+                      "content": "Plaid robe, t-shirt."
+                  },
+                  "finish_reason": "stop"
+              }
+          ],
+          "usage": {
+              "prompt_tokens": 307,
+              "completion_tokens": 9,
+              "total_tokens": 316
           }
-        ],
-        "usage": {
-          "prompt_tokens": 307,
-          "completion_tokens": 9,
-          "total_tokens": 316
-        }
       }
       ```
     </Accordion>
   </Step>
 </Steps>
-
-## Next
-
-<CardGroup cols={2}>
-  <Card title="Keep the stream alive" icon="heart-pulse" href="/the-stream#how-to-kill-and-keep-a-stream-alive">
-    Streams expire after 5 minutes idle. One call renews the lease.
-  </Card>
-  <Card title="Reference any moment" icon="film" href="/chat-completion">
-    `frame_index`, `offset_ms`, `timestamp_ms`, and full video segments.
-  </Card>
-</CardGroup>
-
-<Visibility for="agents">
-
-## Quickstart in one block, for agents
-
-```bash
-# 1. Auth
-export OVERSHOOT_API_KEY="ovs-..."
-
-# 2. Create stream — capture id and LiveKit credentials
-RESP=$(curl -s -X POST https://api.overshoot.ai/v1beta/streams \
-  -H "Authorization: Bearer $OVERSHOOT_API_KEY")
-STREAM_ID=$(echo "$RESP" | jq -r .id)
-ROOM_URL=$(echo "$RESP" | jq -r .publish.url)
-TOKEN=$(echo "$RESP"   | jq -r .publish.token)
-
-# 3. Publish — use any LiveKit client SDK to join $ROOM_URL with $TOKEN
-#    and publish a video track. The publisher identity does not matter.
-
-# 4. Ask the model about the latest frame
-curl -X POST https://api.overshoot.ai/v1beta/chat/completions \
-  -H "Authorization: Bearer $OVERSHOOT_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"model\": \"google/gemma-4-E4B-it\",
-    \"messages\": [{
-      \"role\": \"user\",
-      \"content\": [
-        { \"type\": \"text\", \"text\": \"What am I wearing?\" },
-        { \"type\": \"image_url\", \"image_url\": {
-            \"url\": \"ovs://streams/$STREAM_ID?frame_index=-1\"
-        }}
-      ]
-    }]
-  }"
-
-# 5. Renew lease before 5 minutes elapse, or delete when done
-curl -X POST   https://api.overshoot.ai/v1beta/streams/$STREAM_ID/keepalive -H "Authorization: Bearer $OVERSHOOT_API_KEY"
-curl -X DELETE https://api.overshoot.ai/v1beta/streams/$STREAM_ID          -H "Authorization: Bearer $OVERSHOOT_API_KEY"
-```
-
-### Failure modes to handle
-
-- `POST /streams` → `503` while the ingest is draining. Retry with backoff (≤3 attempts, 1s/2s/4s).
-- `POST /streams` → `402` if the API key has no billing credits.
-- `POST /chat/completions` → `503` if no replica is currently serving the requested model. Either retry or fall back to another model from `GET /models`.
-- Stream URL with `frame_index=-1` resolves to whatever's most recent — if no frames have arrived yet, the request will fail validation. Wait until `GET /streams/{id}` reports a non-null `last_frame_at_ms` before issuing chat completions.
-
-</Visibility>
