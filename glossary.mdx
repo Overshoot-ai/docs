@@ -65,9 +65,9 @@ Overshoot's stream-reference URI scheme. Used inside `image_url` or
 - Segment: `ovs://streams/{stream_id}?start_offset_ms=-5000`
 - Bounded segment: `ovs://streams/{stream_id}?start_offset_ms=0&end_offset_ms=10000`
 
-You can also pass a fully-qualified URL pointing at the same media endpoint
-(`https://api.overshoot.ai/v1beta/streams/{stream_id}/media?frame_index=-1`).
-See [Chat Completion](/chat-completion) for examples.
+The `ovs://` URI is a reference identifier the server parses to extract
+`stream_id` and the query — it is not a fetchable URL. See
+[Chat Completion](/chat-completion) for examples.
 
 ## Lease
 

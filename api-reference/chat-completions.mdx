@@ -10,13 +10,13 @@ The `messages[].content[]` array accepts standard OpenAI content parts plus two 
 - **`image_url`** — points at a single frame of a stream.
 - **`video_url`** — points at a window of frames.
 
-Both wrap an HTTPS URL of the form:
+Both wrap an `ovs://` reference of the form:
 
 ```
-https://api.overshoot.ai/v1beta/streams/{stream_id}/media?<query>
+ovs://streams/{stream_id}?<query>
 ```
 
-The `<query>` is what selects the moment you want. Different keys for single frames vs. windows.
+The `ovs://` scheme is a reference identifier — the server parses it to pull out `stream_id` and the query, then resolves frames internally. It is not a fetchable URL. The `<query>` is what selects the moment you want. Different keys for single frames vs. windows.
 
 ### Image URL — query params
 
@@ -32,7 +32,7 @@ For `type: "image_url"`. **Exactly one** anchor is required.
 
 ```json
 { "type": "image_url",
-  "image_url": { "url": "https://api.overshoot.ai/v1beta/streams/{id}/media?frame_index=-1" }
+  "image_url": { "url": "ovs://streams/{id}?frame_index=-1" }
 }
 ```
 
@@ -54,7 +54,7 @@ Start and end anchor types may differ — `start_offset_ms=-30000&end_frame_inde
 
 ```json
 { "type": "video_url",
-  "video_url": { "url": "https://api.overshoot.ai/v1beta/streams/{id}/media?start_offset_ms=-5000&max_fps=2" }
+  "video_url": { "url": "ovs://streams/{id}?start_offset_ms=-5000&max_fps=2" }
 }
 ```
 
@@ -76,7 +76,7 @@ Start and end anchor types may differ — `start_offset_ms=-30000&end_frame_inde
     "content": [
       { "type": "text", "text": "What is the person doing right now?" },
       { "type": "image_url",
-        "image_url": { "url": "https://api.overshoot.ai/v1beta/streams/{id}/media?frame_index=-1" }
+        "image_url": { "url": "ovs://streams/{id}?frame_index=-1" }
       }
     ]
   }]
@@ -93,7 +93,7 @@ Start and end anchor types may differ — `start_offset_ms=-30000&end_frame_inde
     "content": [
       { "type": "text", "text": "Did anything happen in the last 5 seconds?" },
       { "type": "video_url",
-        "video_url": { "url": "https://api.overshoot.ai/v1beta/streams/{id}/media?start_offset_ms=-5000" }
+        "video_url": { "url": "ovs://streams/{id}?start_offset_ms=-5000" }
       }
     ]
   }]

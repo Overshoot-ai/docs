@@ -43,7 +43,7 @@ Use these terms consistently. Don't invent synonyms.
 ## Canonical URLs
 
 - Base URL: `https://api.overshoot.ai/v1beta`
-- Stream media URL: `https://api.overshoot.ai/v1beta/streams/{stream_id}/media?<anchor>`
+- Stream media reference: `ovs://streams/{stream_id}?<anchor>` (a reference identifier the server parses, not a fetchable URL)
 - Dashboard: `https://platform.overshoot.ai`
 
 Use these consistently. Don't mix `dev-api` or `/v1` into customer-facing pages.
