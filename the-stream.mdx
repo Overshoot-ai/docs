@@ -3,7 +3,7 @@ title: "The Stream"
 description: "A leased session that holds your live video feed and makes it addressable from any chat completion."
 ---
 
-The core piece of Overshoot is the `Stream` entity.
+The core primitive in Overshoot is the `Stream`.
 
 Clients connect any live video source to Overshoot via the `Stream`. Creating one is straightforward — call `/streams` with an API key:
 
@@ -30,13 +30,13 @@ This returns a `stream_id` and a [LiveKit room](https://docs.livekit.io/intro/ba
   ```
 </Accordion>
 
-A `Stream` holds the state of your live feed <u>as long as it's alive</u>. Read on for how to keep one alive, and how to kill it.
+A `Stream` holds the state of your live feed **as long as it's alive**. Read on for how to keep one alive, and how to kill it.
 
 ## Stream state
 
-The `Stream` holds your video as long as it's alive. If you push no frames, it sits empty. 
+The `Stream` holds your video as long as it's alive. If you push no frames, it sits empty.
 
-To check the state (e.g. frames received, recent FPS, time to expiry ...), call:
+To check the state (e.g. frames received, recent FPS, time to expiry, etc.), call:
 
 ```shellscript
 curl https://api.overshoot.ai/v1beta/streams/{stream_id} \
