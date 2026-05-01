@@ -1,148 +1,354 @@
 ---
 title: "Chat Completion"
+description: "Reference any moment of a stream — a single frame, a window, several windows — by URL, inside an OpenAI-compatible request."
 ---
 
-## Intro
+Overshoot's `/chat/completions` is OpenAI-compatible. Everything you already know about request shape, system prompts, streaming, response format, tools — it works.
 
-If you’re familiar with the Chat Completion API, feel free to skip to the next section.
+The piece that's specific to us is **how you reference your video**. When you create a stream, every moment of it becomes addressable by URL. You drop those URLs into a chat message — as `image_url` for a single frame, or `video_url` for a window — and the model sees them as visual context.
 
-Let’s take a minute here to cover the Chat Completion API. This API is the building block of almost all AI applications today.
+## The URL
 
-A Chat Completion Request contains primarily two attributes:
+```
+https://api.overshoot.ai/v1beta/streams/{stream_id}/media?<anchor>
+```
 
-- model: The model the user would like to run
-- messages: A structured chat-form representation of the form. It’s a list containing system messages, user messages (”user questions”), assistant messages and tool calls.
+That's it. The path is fixed. Everything interesting lives in the query string. Set the right query and you can point at:
 
-<Accordion title="Example of Chat Completion request">
-  ```json request.json
-  {
-  "model": "google/gemma-4-E4B-it",
-  "messages": [
-   {
-     "role": "system",
-     "content": [
-       {
-         "type": "text",
-         "text": "You are a helpful assistant"
-       }
-     ]
-   },
-   {
-     "role": "user",
-     "content": [
-       {
-         "type": "text",
-         "text": "what is the capital of france?"
-       }
-     ]
-   },
-   {
-     "role": "assistant",
-     "content": [
-       {
-         "type": "text",
-         "text": "the capital of france is paris."
-       }
-     ]
-   },
-   {
-     "role": "user",
-     "content": [
-       {
-         "type": "text",
-         "text": "how about morocco?"
-       }
-     ]
-   }
-  ]
-  }
-  
-  ```
-</Accordion>
+- the most recent frame,
+- a specific frame number,
+- an exact wall-clock timestamp,
+- the last 5 seconds,
+- a 10-second window starting an hour ago,
+- a window between two specific frame numbers.
 
-Almost all inference providers today provide Chat Completion inference endpoints. You can either call it over raw HTTP or using the `openai` SDK.
+## Single frame — `image_url`
 
-<Accordion title="Example of Chat Completion request using OpenAI python library">
-</Accordion>
+A single frame needs **exactly one** of these query params:
 
-When the inference provider receives the request, they use the models' chat template to turn it into a single string and tokenize it. In the example above, the inference provider will respond with 
+| Param | What it means | Example |
+|---|---|---|
+| `frame_index` | Lifetime-indexed frame number. `-1` is the most recent, `-2` the one before, etc. | `frame_index=-1` |
+| `timestamp_ms` | Absolute stream-clock ms (since `first_frame_at_ms`). | `timestamp_ms=12480` |
+| `offset_ms` | Offset from "now". Negative = past. | `offset_ms=-1500` (1.5s ago) |
 
-For Vision Language Models (VLM), image and video data can be passed in the message content in the form of bytes or URLs.
-
-<CodeGroup>
-
-```json URL wrap
+```json
 {
-	"role": "user",
-	"content": [
-		{
-			"type": "text",
-			"text": "how many people appeared in this video?"
-		},
-		{
-			"type": "video_url",
-			"video_url": {
-				"url": "<https://example.com/video.mp4>"
-			}
-		}
-	]
+  "type": "image_url",
+  "image_url": {
+    "url": "https://api.overshoot.ai/v1beta/streams/{stream_id}/media?frame_index=-1"
+  }
 }
 ```
 
-```json Base 64 wrap
+<Tip>
+  `frame_index=-1` is the cheapest, fastest way to ask "what's happening right now?". One frame, minimum tokens, no decoding work.
+</Tip>
+
+### Snapping to nearby frames
+
+A real stream rarely has a frame at the exact millisecond you ask for. When you anchor by `timestamp_ms` or `offset_ms`, the resolver picks the closest available frame. Two optional knobs control how:
+
+| Param | What it does | Default |
+|---|---|---|
+| `tolerance_ms` | How far the resolver may search for a frame. | `100` |
+| `direction` | Which direction to prefer when no exact match exists: `nearest`, `forward`, or `backward`. | `nearest` |
+
+Both are **ignored when you anchor by `frame_index`** — indices already point at exact frames.
+
+```text
+?timestamp_ms=12480&tolerance_ms=250&direction=backward
+# "find a frame ≤ 12480ms; search up to 250ms back"
+```
+
+## A window of frames — `video_url`
+
+A video segment needs a **start anchor** and accepts an **optional end anchor**. If you omit the end, the segment runs to the live edge.
+
+| Start (pick one, required) | End (pick one, optional) |
+|---|---|
+| `start_frame_index` | `end_frame_index` |
+| `start_timestamp_ms` | `end_timestamp_ms` |
+| `start_offset_ms` | `end_offset_ms` |
+
+You can mix anchor types — `start_offset_ms=-30000&end_frame_index=523` is fine.
+
+<CodeGroup>
+
+```json Last 5 seconds
 {
-	"role": "user",
-	"content": [
-		{
-			"type": "text",
-			"text": "what do you see in this picture"
-		},
-		{
-			"type": "image_url",
-			"image_url": {
-				"url": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ..."
-			}
-		}
-	]
+  "type": "video_url",
+  "video_url": {
+    "url": "https://api.overshoot.ai/v1beta/streams/{stream_id}/media?start_offset_ms=-5000"
+  }
+}
+```
+
+```json Specific window
+{
+  "type": "video_url",
+  "video_url": {
+    "url": "https://api.overshoot.ai/v1beta/streams/{stream_id}/media?start_timestamp_ms=60000&end_timestamp_ms=70000"
+  }
+}
+```
+
+```json Between two frames
+{
+  "type": "video_url",
+  "video_url": {
+    "url": "https://api.overshoot.ai/v1beta/streams/{stream_id}/media?start_frame_index=1200&end_frame_index=1500"
+  }
 }
 ```
 
 </CodeGroup>
 
-If a message contains an image / video, it will get converted into tokens and interleaved with the text.
+### Subsampling — `max_fps`
 
-Note: some models don't allow you to interleave text and images
+A 10-second window at 30 fps is 300 frames. Most of those are redundant. Overshoot subsamples segments to **1 fps by default** so you don't pay for visual tokens that say nothing new.
 
-## Using Overshoot with Chat Completion
+Override it with `max_fps`:
 
-When you create a stream and connect it to your camera source, Overshoot allows you to reference parts (or all) of your stream in the message content of your Chat Completion Request with a simple URL.
+```text
+?start_offset_ms=-3000&max_fps=5
+# last 3 seconds, sampled at up to 5 fps → up to 15 frames
+```
 
-- Use `type=image_url` to refer to a particular frame in the video. For example, the last frame can be referenced as follows:
+| Want | Try |
+|---|---|
+| Cheap "did anything happen?" | `max_fps=1` (default) |
+| Smooth motion | `max_fps=5` to `10` |
+| Frame-accurate | Don't use `video_url` — pull individual frames by `frame_index`. |
 
-```json wrap
+<Warning>
+  Visual tokens dominate prompt size. A 30-second `video_url` at `max_fps=10` is ~300 frames — at Qwen 480p that's ~60K tokens before any text.
+</Warning>
+
+## Quirks worth knowing
+
+<AccordionGroup>
+
+<Accordion title="Negative indices and offsets are relative to 'now'" icon="arrow-left">
+  Negative `frame_index` is interpreted against `last_frame_index` at request time, so `frame_index=-1` always means "most recent". Same for `offset_ms` — it's measured from the live edge when the request lands, not when you wrote the URL.
+
+  This means two requests sent a second apart with `frame_index=-1` see different frames. That's usually what you want.
+</Accordion>
+
+<Accordion title="Old frames clamp; future frames fail" icon="scissors">
+  Streams retain a rolling buffer. Reference a frame older than `first_available_frame_index` and the resolver clamps up to the oldest available frame — your request **succeeds** on a slightly different frame than you asked for.
+
+  Reference a `frame_index` newer than `last_frame_index` and you get `422`. There is no "wait until that frame arrives" semantics.
+</Accordion>
+
+<Accordion title="`tolerance_ms` and `direction` only apply to time-based anchors" icon="filter">
+  `frame_index` already names an exact frame — there's nothing to snap to. If you set `tolerance_ms` or `direction` alongside `frame_index`, they're ignored (the resolver emits a warning).
+</Accordion>
+
+<Accordion title="Mixing anchor types in one segment is fine" icon="merge">
+  `start_offset_ms=-30000&end_frame_index=523` is a valid segment URL. The resolver evaluates each anchor in its own coordinate space, then takes the intersection.
+</Accordion>
+
+<Accordion title="The model never fetches the URL itself" icon="server">
+  Overshoot resolves stream URLs server-side before forwarding to the model. The URL doesn't need to be reachable from the model's network; it's just an addressing scheme.
+
+  Hostname can be any subdomain of `overshoot.ai` (`api`, `dev-api`, etc.) and the path version segment can be any `v*` — the parser is permissive about both. Stick to `https://api.overshoot.ai/v1beta/...` unless you have a reason not to.
+</Accordion>
+
+</AccordionGroup>
+
+## Patterns
+
+<CardGroup cols={2}>
+  <Card title="What's in front of me right now?" icon="image">
+    `image_url` with `frame_index=-1`. One frame, one tokenization, fastest possible answer.
+  </Card>
+  <Card title="Did anything just happen?" icon="film">
+    `video_url` with `start_offset_ms=-3000`. Three seconds back to the live edge, ~3 frames at default fps.
+  </Card>
+  <Card title="Replay 10:00–10:30" icon="clock">
+    `video_url` with `start_timestamp_ms` + `end_timestamp_ms`. Stable across calls, doesn't drift with the live edge.
+  </Card>
+  <Card title="Compare two cameras" icon="grid">
+    Two `image_url` parts in the same `messages` array, each with a different `stream_id`. The model sees them as separate visual contexts.
+  </Card>
+</CardGroup>
+
+## Full request
+
+<Accordion title="curl" icon="code">
+  ```shellscript wrap
+  curl -X POST https://api.overshoot.ai/v1beta/chat/completions \
+    -H "Authorization: Bearer $OVERSHOOT_API_KEY" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "model": "google/gemma-4-E4B-it",
+      "messages": [{
+        "role": "user",
+        "content": [
+          { "type": "text", "text": "What does it say on my shirt?" },
+          { "type": "image_url", "image_url": {
+              "url": "https://api.overshoot.ai/v1beta/streams/$STREAM_ID/media?frame_index=-1"
+          }}
+        ]
+      }]
+    }'
+  ```
+</Accordion>
+
+<Accordion title="New to Chat Completions?" icon="circle-question">
+  A chat completion request has two essentials:
+
+  - `model` — which model to run.
+  - `messages` — a list of `{ role, content }` entries. Roles are `system`, `user`, `assistant`. `content` can be a plain string or a list of typed parts (text, image, video).
+
+  ```json
+  {
+    "model": "google/gemma-4-E4B-it",
+    "messages": [
+      { "role": "system", "content": "You are a helpful assistant." },
+      { "role": "user",   "content": "What is the capital of France?" }
+    ]
+  }
+  ```
+
+  For vision-language models, image and video parts can carry HTTP URLs or base64 data URIs. Overshoot adds one extra recipe: an HTTPS URL pointing at one of your live streams.
+</Accordion>
+
+<Visibility for="agents">
+
+## URL grammar — full spec
+
+```
+https://<host>.overshoot.ai/v<version>/streams/{stream_id}/media?<query>
+```
+
+- `host` — any subdomain of `overshoot.ai` (`api`, `dev-api`, etc.). Use `api` in production.
+- `version` — any `v*` segment (`v1`, `v1beta`, etc.). Current is `v1beta`.
+- Path **must** end with `/media`. URLs that match the host pattern but not this exact path return `422`.
+- The model resolver fetches the URL server-side; the model itself never sees the HTTP URL.
+
+### `image_url` query params
+
+Exactly one **anchor** is required:
+
+| Param | Type | Meaning |
+|---|---|---|
+| `frame_index` | int | Lifetime-indexed frame number. Negative = relative to live edge. `-1` is most recent. |
+| `timestamp_ms` | int | Absolute stream-clock ms since `first_frame_at_ms` (the value returned by `GET /streams/{id}`). |
+| `offset_ms` | int | Offset from "now" (last frame at request time). Negative = past, positive = future (always fails). |
+
+Optional **modifiers** (ignored when `frame_index` is set):
+
+| Param | Type | Default | Meaning |
+|---|---|---|---|
+| `tolerance_ms` | int > 0 | `100` | How far the resolver may snap to find a frame. |
+| `direction` | enum | `nearest` | `nearest` \| `forward` \| `backward`. Resolution preference when no exact match within tolerance. |
+
+Setting more than one anchor → `422 query_param_invalid`.
+
+### `video_url` query params
+
+Exactly one **start anchor** is required:
+
+| Param | Type | Meaning |
+|---|---|---|
+| `start_frame_index` | int | Lifetime index. |
+| `start_timestamp_ms` | int | Absolute stream-clock ms. |
+| `start_offset_ms` | int | Offset from now; negative = past. |
+
+At most one **end anchor** (defaults to live edge if omitted):
+
+| Param | Type | Meaning |
+|---|---|---|
+| `end_frame_index` | int | Lifetime index. |
+| `end_timestamp_ms` | int | Absolute stream-clock ms. |
+| `end_offset_ms` | int | Offset from now. |
+
+Optional **subsample**:
+
+| Param | Type | Default | Meaning |
+|---|---|---|---|
+| `max_fps` | float > 0 | `1.0` | Cap on frames per second sampled from the segment. Lower = cheaper. |
+
+Setting more than one start anchor or more than one end anchor → `422`.
+
+### Resolution semantics
+
+- **Negative `frame_index` / `offset_ms`** are evaluated against `last_frame_index` / now at request time, so the same URL can resolve differently on consecutive calls.
+- **Old frames clamp.** A `frame_index` (or `start_frame_index`) older than `first_available_frame_index` clamps up to the oldest available frame. Request succeeds, possibly on a different frame than asked.
+- **Future frames fail.** A `frame_index` newer than `last_frame_index` returns `422`. There is no wait-until-arrival.
+- **Anchor types may be mixed in one segment.** `start_offset_ms` + `end_frame_index` is valid.
+- **Duplicate query keys** (`?frame_index=1&frame_index=2`) → `422`.
+
+### Request shape
+
+```json
 {
-	"type": "image_url", 
-	"image_url": {"url": "ovs://streams/{stream_id}?frame_index=-1"}
+  "model": "<id from GET /models>",
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        { "type": "text", "text": "..." },
+        { "type": "image_url", "image_url": { "url": "..." } },
+        { "type": "video_url", "video_url": { "url": "..." } }
+      ]
+    }
+  ],
+  "max_completion_tokens": 256,
+  "response_format": { "type": "text" }
 }
 ```
 
-- Use `type=video_url` to refer to a segment in the video. Unlike the frame, a video segment must have a `start` and `end` . If no `end` is specified, we default to `now` . For example, to refer to the last 5 seconds of the stream,
+The endpoint accepts unknown top-level fields and forwards them to the upstream model — anything OpenAI accepts works (including `tools`, `tool_choice`, `temperature`, `seed`).
 
-```json wrap
-{"type": "video_url", "video_url": {"url": "ovs://streams/{stream_id}?start_offset_ms=-5000"}}
+### Response shape
+
+```json
+{
+  "id": "...",
+  "object": "chat.completion",
+  "created": 1777530304,
+  "model": "google/gemma-4-E4B-it",
+  "choices": [
+    {
+      "index": 0,
+      "message": { "role": "assistant", "content": "..." },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": { "prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0 }
+}
 ```
 
-- To look at the first 5 minutes of the stream, use `start_offset_ms` instead.
+### Errors
 
-```json wrap
-{"type": "video_url", "video_url": {"url": "ovs://streams/{stream_id}?start_offset_ms=0&end_offset_ms=10000"}}
+| Code | `error` / `code` | Meaning |
+|---|---|---|
+| `401` / `403` | — | Missing or invalid API key. |
+| `404` | — | `stream_id` doesn't exist or isn't owned by your key. |
+| `422` | `stream_url_invalid` | URL host matches `*.overshoot.ai` but path isn't `/streams/{id}/media`. |
+| `422` | `query_param_invalid` | Wrong anchor count, unknown query key, malformed value, duplicate key, out-of-range `frame_index`, etc. |
+| `422` | `model_not_found` | `model` field doesn't match any entry in `GET /models` (or model is not currently `ready`). |
+| `503` | — | No replica is currently serving the requested model. Retry, or list `/models` and fall back. |
+
+### Streaming
+
+Pass `"stream": true` in the request body to receive Server-Sent Events. The chunk shape matches OpenAI's streaming format (`data: {choices: [{delta: {...}}]}\n\n`, terminated by `data: [DONE]`).
+
+### Cost math
+
+```
+prompt_tokens ≈ text_tokens + n_frames × tokens_per_frame
 ```
 
-The mental model here is that when you create a `Stream` , Overshoot gives you a handle to reference any part (or all) of the stream in any conversation with any model.
+For Qwen at 480p, `tokens_per_frame ≈ 200`. A `video_url` segment of length `T` seconds at `max_fps=F` produces roughly `min(T × F, T × stream_fps)` frames — the actual frame count caps at the publisher's frame rate.
 
-That is, you can:
+| Knob | Effect on tokens |
+|---|---|
+| Halve `max_fps` | Halves frame count, halves visual tokens. |
+| Drop publisher resolution 1080p → 480p | Roughly 5× fewer tokens per frame on Qwen. |
+| Switch from `video_url` to a single `image_url` | Tokens collapse to one frame's worth. |
 
-- Have a model look at multiple segments of the same stream in the same converstion
-- The model can also watch segments from different streams at the same time
-- Have small model watch the stream for a specific event and escalate it to a bigger model
-- Have multiple models watch the same stream for a given event and only escalate it if event is triggered
+</Visibility>

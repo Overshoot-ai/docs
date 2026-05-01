@@ -1,12 +1,106 @@
 ---
-title: "Pro tips"
+title: "Best practices"
+description: "Patterns for keeping latency low, costs predictable, and streams alive."
 ---
 
-Latency tips: 
+A few habits make Overshoot apps feel snappy and behave well in production.
 
-- Inference latency scales with input and output size. For most requests involving vision data, the image and video tokens represent a large portion of the prompt. To keep latency small, only include the parts in the stream that are relevant. For example, most tasks only need single frames.
+## Latency
 
-Stream tips: 
+<CardGroup cols={2}>
+  <Card title="Send only what you need" icon="image">
+    A single frame (`image_url`) costs a fraction of a video segment. Most "what's happening?" questions only need the latest frame.
+  </Card>
+  <Card title="Keep prompts terse" icon="comment">
+    System messages and few-shot examples are tokens too. Visual tokens dominate, but text adds up at high frame counts.
+  </Card>
+  <Card title="Pick a smaller model" icon="bolt">
+    `gemma-4-E2B-it` and `Qwen3.5-9B` are good defaults. Reach for 27B+ only when quality demands it.
+  </Card>
+  <Card title="Drop resolution" icon="compress">
+    480p Qwen costs ~5× fewer tokens per frame than 1080p. Publish at the resolution you actually need.
+  </Card>
+</CardGroup>
 
-- Remember to keep your streams alive using the `/keepalive` endpoint 
-- When calling `/keepalive` , we issue a new token that you can use to join the room in case the client gets disconnected 
+## Streams
+
+- **Renew before you have to.** Streams expire after **5 minutes** idle. Call `/keepalive` every **2 minutes**.
+- **Save the keepalive token.** Each `/keepalive` returns a fresh LiveKit token — keep it around for reconnects.
+- **Delete when done.** A `DELETE /streams/{id}` releases resources immediately instead of waiting for the lease.
+
+## Reliability
+
+- **Always list models before you start.** `/models` is the source of truth. Don't hardcode an `id` and assume it's serving.
+- **Handle `503` on completions.** It means the replica fell over. Retry with backoff, or fall back to another `ready` model.
+- **Treat `frame_index` as monotonic.** If you reference an old index that's been evicted, the resolver clamps to the oldest available — your request still succeeds, but on a different frame than you asked for.
+
+<Visibility for="agents">
+
+## Production playbook — for agents
+
+### Stream lifecycle pseudo-code
+
+```python
+async def with_stream(prompt_fn):
+    stream = await create_stream()
+    keepalive_task = asyncio.create_task(keepalive_loop(stream.id))
+    try:
+        async with publisher(stream.publish.url, stream.publish.token):
+            await wait_for_first_frame(stream.id, timeout=10)
+            return await prompt_fn(stream.id)
+    finally:
+        keepalive_task.cancel()
+        await delete_stream(stream.id)
+```
+
+`keepalive_loop` runs `POST /streams/{id}/keepalive` every 90s and updates the publisher with the fresh token. `wait_for_first_frame` polls `GET /streams/{id}` until `last_frame_at_ms` is non-null — issuing chat completions before this returns produces validation errors.
+
+### Retry budget
+
+| Operation | Retry on | Backoff | Cap |
+|---|---|---|---|
+| `POST /streams` | `503` | 1s, 2s, 4s | 3 attempts |
+| `POST /streams/{id}/keepalive` | network, `503` | 1s, 1s, 1s | 3 attempts before treating as fatal |
+| `POST /chat/completions` | `503`, network | 0.5s, 1s, 2s | 3 attempts, then fall back to next model |
+
+Don't retry `4xx` other than `429` (which Overshoot doesn't currently emit, but is a sensible defensive case).
+
+### Visual-token math
+
+Treat the request size as approximately:
+
+```
+prompt_tokens ≈ text_tokens + n_frames × tokens_per_frame
+```
+
+For Qwen at 480p, `tokens_per_frame ≈ 200`. For Gemma 4, `tokens_per_frame` is whatever budget you set per-request (default 256). A 60-frame Gemma request at the default budget is ~15K visual tokens before any text; a 1-second window at 30 fps on Qwen is ~6K.
+
+Latency scales roughly linearly with `prompt_tokens + completion_tokens`. To halve latency, halve one of:
+
+- frames in the segment,
+- resolution of the publisher,
+- per-frame token budget (Gemma only).
+
+### Picking the cheapest viable anchor
+
+| Use case | Anchor | Why |
+|---|---|---|
+| "What's in front of me right now?" | `image_url` with `frame_index=-1` | One frame; minimum tokens. |
+| "Did anything happen recently?" | `video_url` with `start_offset_ms=-3000` | Short, anchored to live edge. |
+| "Replay 10:00–10:30" | `video_url` with `start_timestamp_ms` + `end_timestamp_ms` | Deterministic, doesn't drift with the live edge. |
+| "Look at frame N exactly" | `image_url` with `frame_index=N` | Stable across calls; `timestamp_ms` is too. |
+
+### Idempotency
+
+- Stream creates aren't idempotent — there's no idempotency key. Don't auto-retry `POST /streams` until you've confirmed the previous attempt failed (no response logged).
+- Chat completions are idempotent in the sense that there are no side effects, but every retry incurs cost and emits a new `id`.
+- Deletes are idempotent: a `404` after a successful `DELETE` is fine to ignore.
+
+### Watching multiple streams
+
+A single `messages` array can carry content parts referencing different `stream_id`s. The model sees them as separate visual contexts and can compare across them. Useful patterns:
+
+- **Cross-camera correlation** — pass the latest frame from each camera; ask "which view shows the package?"
+- **Triage with escalation** — small model watches every camera every 1s; on a hit, the orchestrator calls a bigger model with a longer window from just the relevant camera.
+
+</Visibility>

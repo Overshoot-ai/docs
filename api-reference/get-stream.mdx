@@ -2,3 +2,15 @@
 title: Get stream
 openapi: 'GET /streams/{stream_id}'
 ---
+
+## Reading the response
+
+The response covers three axes you'll mix when authoring stream URLs:
+
+- **Wall-clock time** — `created_at_ms`, `first_frame_at_ms`, `last_frame_at_ms`, `expires_at_ms`. Unix ms. Useful for absolute deadlines and `timestamp_ms` math (the `timestamp_ms` anchor is measured from `first_frame_at_ms`).
+- **Stream-clock time** — `stream_time_ms`. Monotonically increases from `0` at the first frame; resets to no other clock if the publisher pauses.
+- **Frame indices** — `last_frame_index`, `first_available_frame_index`. Lifetime indices that never reset, even after eviction. The pair defines the retention window — anything in `[first_available_frame_index, last_frame_index]` resolves cleanly; older indices clamp up to `first_available_frame_index`.
+
+Until the publisher delivers a first frame, every `*_at_ms` / `*_index` field returns `null` (only `id`, `state`, `created_at_ms`, `expires_at_ms`, `ttl_seconds` are populated). Polling `last_frame_at_ms` is the cheapest "wait for ingest" check.
+
+After the stream ends, `state` becomes `ended` with `ended_at_ms` and `end_reason` set. The endpoint keeps returning the ended record for a short tombstone window, then `404`s.

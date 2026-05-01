@@ -1,10 +1,76 @@
 ---
-title: "Intro"
+title: "Welcome to Overshoot"
+description: "Real-time vision, exposed through two endpoints."
 ---
 
-The Overshoot interface is composed of two main endpoints:
+Overshoot turns any live video feed into something a vision-language model can talk to. The API is two endpoints:
 
-- `/streams`
-- `/chat/completions`
+- `/streams` — open a session, push frames over WebRTC, keep it alive.
+- `/chat/completions` — ask any model about any moment of any stream.
 
-We will walk you through both endpoints and explain how you can use them to build any realtime vision application.
+That's it. Everything else — the model menu, the URL grammar for picking out a frame or a window of frames — sits underneath those two.
+
+<Visibility for="humans">
+
+## Where to go next
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="play" href="/quickstart">
+    Webcam to model in four steps.
+  </Card>
+  <Card title="The Stream" icon="video" href="/the-stream">
+    Lifecycle, leases, and how to keep a session alive.
+  </Card>
+  <Card title="Chat Completion" icon="message" href="/chat-completion">
+    URL grammar for referencing frames and segments.
+  </Card>
+  <Card title="Models" icon="microchip-ai" href="/models">
+    What's available, context limits, picking the right one.
+  </Card>
+</CardGroup>
+
+</Visibility>
+
+<Visibility for="agents">
+
+## Mental model for agents
+
+A `Stream` is a leased server-side handle for a live video feed. Once a publisher is attached (via the LiveKit room URL + token returned at creation), Overshoot ingests frames continuously and indexes them. The handle is opaque from the model's perspective — you reference moments inside the stream by URL, not by uploading bytes.
+
+A chat completion request is OpenAI-compatible. The only Overshoot-specific construct is the URL inside `image_url` / `video_url` content parts:
+
+```
+https://api.overshoot.ai/v1beta/streams/{stream_id}/media?<anchor>
+```
+
+Where `<anchor>` is exactly one of:
+
+- `frame_index=N` — Nth frame of the stream's lifetime. Negative = from live edge. `frame_index=-1` is "the latest frame".
+- `timestamp_ms=N` — absolute stream-clock timestamp in ms.
+- `offset_ms=N` — offset from now, in ms. Negative = past.
+
+Video segments take a `start_*` anchor and an optional `end_*` anchor (defaults to live edge). Use the same field names with a `start_` / `end_` prefix.
+
+## Authentication
+
+All endpoints except `GET /models` require a bearer token: `Authorization: Bearer ovs-...`. Keys are issued from the [dashboard](https://platform.overshoot.ai).
+
+## Lifecycle invariants
+
+- A stream is deleted ~5 minutes after the last keepalive or after `DELETE /streams/{id}`.
+- A stream's `state` transitions only forward: `active` → `ended`. There is no resume.
+- A new keepalive returns a fresh LiveKit token; the old token may stop working when the publisher reconnects.
+- `frame_index` is monotonically increasing across the stream's lifetime, even after eviction. Old indices outside the retention window resolve to the oldest available frame (intersection-with-availability semantics).
+
+## Endpoint surface
+
+| Method | Path | Auth | Purpose |
+|---|---|---|---|
+| `GET` | `/v1beta/models` | No | List available vision-language models. |
+| `POST` | `/v1beta/streams` | Yes | Create a stream, get a LiveKit room + token. |
+| `GET` | `/v1beta/streams/{id}` | Yes | Inspect stream state. |
+| `POST` | `/v1beta/streams/{id}/keepalive` | Yes | Renew lease, get a fresh token. |
+| `DELETE` | `/v1beta/streams/{id}` | Yes | End the stream. |
+| `POST` | `/v1beta/chat/completions` | Yes | OpenAI-compatible chat completions. |
+
+</Visibility>

@@ -1,34 +1,27 @@
-> **Customize this file**: Tailor this template to your project by noting specific contribution types you're looking for, adding a Code of Conduct, or adjusting the writing guidelines to match your style.
+# Contributing
 
-# Contribute to the documentation
+This is the public docs site for [Overshoot](https://overshoot.ai). It's open so you can suggest fixes — typos, broken links, unclear explanations, missing examples.
 
-Thank you for your interest in contributing to our documentation! This guide will help you get started.
+## Quick edits
 
-## How to contribute
+Click the pencil icon at the top of any page on docs.overshoot.ai to edit on GitHub and open a PR.
 
-### Option 1: Edit directly on GitHub
+## Local development
 
-1. Navigate to the page you want to edit
-2. Click the "Edit this file" button (the pencil icon)
-3. Make your changes and submit a pull request
+```bash
+npm i -g mint
+mint dev
+```
 
-### Option 2: Local development
+Preview at `http://localhost:3000`. Run `mint broken-links` before opening a PR.
 
-1. Fork and clone this repository
-2. Install the Mintlify CLI: `npm i -g mint`
-3. Create a branch for your changes
-4. Make changes
-5. Navigate to the docs directory and run `mint dev`
-6. Preview your changes at `http://localhost:3000`
-7. Commit your changes and submit a pull request
+## Writing style
 
-For more details on local development, see our [development guide](development.mdx).
+See [`AGENTS.md`](./AGENTS.md) — it covers voice, the human/agent visibility split, and canonical URL conventions. The short version:
 
-## Writing guidelines
+- Active voice, second person.
+- One idea per sentence.
+- Concrete numbers, not adjectives.
+- No emoji, no hedges, no "we recommend".
 
-- **Use active voice**: "Run the command" not "The command should be run"
-- **Address the reader directly**: Use "you" instead of "the user"
-- **Keep sentences concise**: Aim for one idea per sentence
-- **Lead with the goal**: Start instructions with what the user wants to accomplish
-- **Use consistent terminology**: Don't alternate between synonyms for the same concept
-- **Include examples**: Show, don't just tell
+If your change touches API behavior, update [`api-reference/openapi.yaml`](./api-reference/openapi.yaml) too — it drives the reference pages.

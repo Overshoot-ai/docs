@@ -132,8 +132,8 @@ paths:
       description: |
         OpenAI-compatible chat completions endpoint. To reference frames from a live stream,
         include a `video_url` or `image_url` content part whose URL points at
-        `/v1/streams/{stream_id}/media` with a `start_offset_ms` (relative to live edge)
-        or `frame_index` query param.
+        `/v1beta/streams/{stream_id}/media` with a `start_offset_ms` (relative to live edge),
+        `frame_index`, `timestamp_ms`, or `offset_ms` query param.
       requestBody:
         required: true
         content:
@@ -143,7 +143,7 @@ paths:
               video_qa:
                 summary: Ask a model about the last 5 seconds of a stream
                 value:
-                  model: gemini-2.5-flash
+                  model: google/gemma-4-E4B-it
                   messages:
                     - role: user
                       content:
@@ -224,71 +224,144 @@ components:
     ModelInfo:
       type: object
       properties:
-        id: { type: string, example: gemini-2.5-flash }
-        object: { type: string, default: model }
-        created: { type: integer, description: Unix seconds. }
-        owned_by: { type: string, default: overshoot }
-        status: { type: string, example: ready }
+        id:
+          type: string
+          example: Qwen/Qwen3.5-9B
+          description: "Model identifier. Pass this verbatim as the `model` field on `/chat/completions`."
+        object:
+          type: string
+          default: model
+          description: "Object type tag. Always `model`."
+        created:
+          type: integer
+          description: "Unix seconds when the model entry was registered."
+        owned_by:
+          type: string
+          default: overshoot
+          description: "Provider tag. `overshoot` for models we serve directly."
+        status:
+          type: string
+          enum: [ready, loading]
+          example: ready
+          description: |
+            Replica health. `ready` = at least one healthy replica is currently serving;
+            `loading` = replicas are starting (don't depend on it). Models with no healthy
+            replica are omitted from the response entirely.
       required: [id, object, created, owned_by, status]
 
     ModelsResponse:
       type: object
       properties:
-        object: { type: string, default: list }
+        object:
+          type: string
+          default: list
+          description: "Always `list`."
         data:
           type: array
           items: { $ref: "#/components/schemas/ModelInfo" }
+          description: "Models that currently have at least one healthy replica or are loading."
       required: [object, data]
 
     CreateStreamResponse:
       type: object
       properties:
-        id: { type: string, format: uuid }
-        state: { type: string, enum: [active] }
+        id: { type: string, format: uuid, description: "Unique stream identifier. Use this in every subsequent stream URL." }
+        state: { type: string, enum: [active], description: "Always `active` for a freshly created stream." }
         publish: { $ref: "#/components/schemas/PublishInfo" }
-        expires_at_ms: { type: integer, description: "Lease expiry, Unix ms." }
-        ttl_seconds: { type: integer, description: Lease TTL in seconds. }
+        expires_at_ms: { type: integer, description: "Wall-clock Unix ms when the lease will expire if not renewed via `/keepalive`." }
+        ttl_seconds: { type: integer, description: "Lease TTL in seconds. Currently `300` for all streams." }
       required: [id, state, publish, expires_at_ms, ttl_seconds]
 
     StreamStatusResponse:
       type: object
       properties:
-        id: { type: string, format: uuid }
+        id: { type: string, format: uuid, description: "Stream identifier. Stable for the stream's lifetime." }
         state:
           type: string
           enum: [active, ended]
-        stream_time_ms: { type: number, nullable: true, description: Stream-clock position in ms. }
-        last_frame_at_ms: { type: integer, nullable: true }
-        last_frame_index: { type: integer, nullable: true }
-        first_frame_at_ms: { type: integer, nullable: true }
-        first_available_frame_at_ms: { type: integer, nullable: true }
-        first_available_frame_index: { type: integer, nullable: true }
-        created_at_ms: { type: integer, nullable: true }
-        recent_fps: { type: number, nullable: true }
-        retained_frame_count: { type: integer, nullable: true }
-        evicted_frame_count: { type: integer, nullable: true }
-        expires_at_ms: { type: integer, nullable: true }
-        ttl_seconds: { type: integer, nullable: true }
-        ended_at_ms: { type: integer, nullable: true }
-        end_reason: { type: string, nullable: true }
-        audio: { type: boolean, default: false, description: Reserved for future audio support. }
+          description: |
+            Lifecycle state. `active` while the stream accepts publishers and inference. `ended`
+            once it has expired, been deleted, or been reaped — this transition is terminal.
+        stream_time_ms:
+          type: number
+          nullable: true
+          description: "Stream-clock position in ms — monotonically increases from `0` at the first frame. `null` until the first frame arrives."
+        last_frame_at_ms:
+          type: integer
+          nullable: true
+          description: "Wall-clock Unix ms of the most recent frame ingested. `null` until a frame has arrived."
+        last_frame_index:
+          type: integer
+          nullable: true
+          description: "Lifetime index of the most recent frame. `frame_index=-1` resolves against this value at request time."
+        first_frame_at_ms:
+          type: integer
+          nullable: true
+          description: "Wall-clock Unix ms of the first frame ever ingested on this stream. Used as the origin for `timestamp_ms` anchors in stream URLs."
+        first_available_frame_at_ms:
+          type: integer
+          nullable: true
+          description: "Wall-clock Unix ms of the oldest frame still in the retention buffer. Frames older than this have been evicted."
+        first_available_frame_index:
+          type: integer
+          nullable: true
+          description: "Lifetime index of the oldest frame still retained. References to indices below this clamp up to it (intersection-with-availability)."
+        created_at_ms:
+          type: integer
+          nullable: true
+          description: "Wall-clock Unix ms when the stream resource was created (before any frame arrived)."
+        recent_fps:
+          type: number
+          nullable: true
+          description: "Rolling FPS measured over the last few seconds of ingest."
+        retained_frame_count:
+          type: integer
+          nullable: true
+          description: "Number of frames currently held in the retention buffer."
+        evicted_frame_count:
+          type: integer
+          nullable: true
+          description: "Number of frames that have aged out of retention since the stream began."
+        expires_at_ms:
+          type: integer
+          nullable: true
+          description: "Wall-clock Unix ms when the lease expires if not renewed."
+        ttl_seconds:
+          type: integer
+          nullable: true
+          description: "Lease TTL in seconds. Currently `300`."
+        ended_at_ms:
+          type: integer
+          nullable: true
+          description: "Wall-clock Unix ms when the stream entered the `ended` state. `null` while `state == active`."
+        end_reason:
+          type: string
+          nullable: true
+          enum: [expired, deleted, reaped]
+          description: |
+            Why the stream ended. `expired` = TTL elapsed, `deleted` = explicit `DELETE`,
+            `reaped` = system cleanup. `null` while `state == active`.
+        audio:
+          type: boolean
+          default: false
+          description: "Reserved for future audio support. Always `false` today."
       required: [id, state]
 
     KeepaliveResponse:
       type: object
       properties:
-        id: { type: string, format: uuid }
-        expires_at_ms: { type: integer }
-        ttl_seconds: { type: integer }
-        stream_time_ms: { type: number, default: 0.0 }
+        id: { type: string, format: uuid, description: "The stream's identifier (echoed back)." }
+        expires_at_ms: { type: integer, description: "New wall-clock Unix ms lease expiry, set to `now + ttl_seconds`." }
+        ttl_seconds: { type: integer, description: "Lease TTL in seconds." }
+        stream_time_ms: { type: number, default: 0.0, description: "Current stream-clock position in ms (matches `GET /streams/{id}`)." }
         publish: { $ref: "#/components/schemas/PublishInfo" }
       required: [id, expires_at_ms, ttl_seconds, publish]
 
     DeleteStreamResponse:
       type: object
       properties:
-        id: { type: string, format: uuid }
-        deleted: { type: boolean, default: true }
+        id: { type: string, format: uuid, description: "The deleted stream's identifier." }
+        deleted: { type: boolean, default: true, description: "Always `true` on success." }
       required: [id, deleted]
 
     ChatCompletionRequest:
@@ -296,28 +369,38 @@ components:
       description: |
         OpenAI-compatible. Permissive — unknown fields are accepted and ignored. To reference
         a stream's frames, include `video_url` or `image_url` content parts pointing at
-        `/v1/streams/{stream_id}/media`.
+        `/v1beta/streams/{stream_id}/media`.
       additionalProperties: true
       properties:
         model:
           type: string
-          description: One of the IDs returned by `GET /models`.
-          example: gemini-2.5-flash
+          description: "Model identifier from `GET /models`. The model must be `ready` at request time."
+          example: Qwen/Qwen3.5-9B
         messages:
           type: array
           items: { $ref: "#/components/schemas/ChatMessage" }
+          description: |
+            Conversation turns. `content` may be a plain string or a list of typed parts
+            (`text`, `image_url`, `video_url`). Use `image_url` / `video_url` parts to reference
+            a stream's frames or windows — see the URL grammar below.
         response_format:
           type: object
           additionalProperties: true
-          description: OpenAI-shape `response_format` (passed through to the upstream model).
-        max_completion_tokens: { type: integer, nullable: true }
-        max_tokens: { type: integer, nullable: true }
+          description: "OpenAI-shape `response_format`. Passed through to the upstream model unchanged."
+        max_completion_tokens:
+          type: integer
+          nullable: true
+          description: "Cap on tokens generated. OpenAI's preferred name."
+        max_tokens:
+          type: integer
+          nullable: true
+          description: "Legacy alias for `max_completion_tokens`. Both work; pick one."
       required: [model, messages]
 
     ChatMessage:
       type: object
       properties:
-        role: { type: string, enum: [system, user, assistant] }
+        role: { type: string, enum: [system, user, assistant], description: "Conversation role." }
         content:
           oneOf:
             - type: string
@@ -349,7 +432,16 @@ components:
               type: string
               description: |
                 Either an HTTPS image URL or an Overshoot stream frame URL like
-                `/v1/streams/{stream_id}/media?frame_index=-1`.
+                `https://api.overshoot.ai/v1beta/streams/{stream_id}/media?frame_index=-1`.
+
+                Required: exactly one of `frame_index` (lifetime index; `-1` = latest),
+                `timestamp_ms` (absolute stream-clock ms), or `offset_ms` (offset from now;
+                negative = past).
+
+                Optional, ignored when `frame_index` is set:
+                - `tolerance_ms` (int > 0, default `100`) — how far the resolver may snap.
+                - `direction` (`nearest` | `forward` | `backward`, default `nearest`) —
+                  preference when no exact frame matches within tolerance.
           required: [url]
       required: [type, image_url]
 
@@ -364,39 +456,54 @@ components:
               type: string
               description: |
                 Overshoot stream segment URL, e.g.
-                `/v1/streams/{stream_id}/media?start_offset_ms=-5000` (last 5 seconds).
+                `https://api.overshoot.ai/v1beta/streams/{stream_id}/media?start_offset_ms=-5000`
+                (last 5 seconds).
+
+                Required: exactly one start anchor — `start_frame_index`, `start_timestamp_ms`,
+                or `start_offset_ms`.
+
+                Optional end anchor (defaults to live edge): at most one of `end_frame_index`,
+                `end_timestamp_ms`, `end_offset_ms`. Start and end anchor types may differ.
+
+                Optional `max_fps` (float > 0, default `1.0`) caps how densely frames are
+                sampled from the segment. Visual tokens scale linearly with frame count, so
+                lowering `max_fps` is the easiest cost knob.
           required: [url]
       required: [type, video_url]
 
     ChatCompletionResponse:
       type: object
       properties:
-        id: { type: string }
-        object: { type: string, default: chat.completion }
-        created: { type: integer }
-        model: { type: string }
+        id: { type: string, description: "Unique completion ID. Different on every retry." }
+        object: { type: string, default: chat.completion, description: "Always `chat.completion`." }
+        created: { type: integer, description: "Unix seconds when the completion was generated." }
+        model: { type: string, description: "Echoed model ID from the request." }
         choices:
           type: array
           items: { $ref: "#/components/schemas/ChatCompletionChoice" }
+          description: "Generated completions. Length = 1 unless the request set `n > 1`."
         usage: { $ref: "#/components/schemas/ChatCompletionUsage" }
       required: [id, object, created, model, choices]
 
     ChatCompletionChoice:
       type: object
       properties:
-        index: { type: integer }
+        index: { type: integer, description: "Zero-based index in the `choices` array." }
         message:
           type: object
           properties:
-            role: { type: string }
-            content: { type: string, nullable: true }
+            role: { type: string, description: "Always `assistant`." }
+            content: { type: string, nullable: true, description: "Generated text. `null` if the model produced only tool calls." }
           required: [role]
-        finish_reason: { type: string, nullable: true }
+        finish_reason:
+          type: string
+          nullable: true
+          description: "Why generation stopped: `stop` (natural), `length` (token cap hit), `tool_calls`, or `content_filter`."
       required: [index, message]
 
     ChatCompletionUsage:
       type: object
       properties:
-        prompt_tokens: { type: integer, default: 0 }
-        completion_tokens: { type: integer, default: 0 }
-        total_tokens: { type: integer, default: 0 }
+        prompt_tokens: { type: integer, default: 0, description: "Tokens in the request — text plus visual tokens from any frames or segments." }
+        completion_tokens: { type: integer, default: 0, description: "Tokens generated in the response." }
+        total_tokens: { type: integer, default: 0, description: "Sum of `prompt_tokens` and `completion_tokens`." }

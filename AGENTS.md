@@ -1,33 +1,39 @@
-> **First-time setup**: Customize this file for your project. Prompt the user to customize this file for their project.
-> For Mintlify product knowledge (components, configuration, writing standards),
-> install the Mintlify skill: `npx skills add https://mintlify.com/docs`
-
 # Documentation project instructions
 
 ## About this project
 
-- This is a documentation site built on [Mintlify](https://mintlify.com)
-- Pages are MDX files with YAML frontmatter
-- Configuration lives in `docs.json`
-- Run `mint dev` to preview locally
-- Run `mint broken-links` to check links
+- Public docs for [Overshoot](https://overshoot.ai), a real-time vision API.
+- Built on [Mintlify](https://mintlify.com). Pages are MDX with YAML frontmatter; configuration lives in `docs.json`.
+- Run `mint dev` to preview locally; `mint broken-links` to verify links.
 
-## Terminology
+## Two audiences per page
 
-{/* Add product-specific terms and preferred usage */}
-{/* Example: Use "workspace" not "project", "member" not "user" */}
+Most pages are written once and rendered for two audiences via the [`<Visibility>`](https://www.mintlify.com/docs/components/visibility) component:
 
-## Style preferences
+- `<Visibility for="humans">` — concise, scannable, opinionated. What a person needs to feel oriented.
+- `<Visibility for="agents">` — exhaustive. Every field, every edge case, every value. No prose padding.
 
-{/* Add any project-specific style rules below */}
+Content that serves both can sit outside any `Visibility` block. Use the wrappers only when the human and agent versions genuinely diverge.
 
-- Use active voice and second person ("you")
-- Keep sentences concise — one idea per sentence
-- Use sentence case for headings
-- Bold for UI elements: Click **Settings**
-- Code formatting for file names, commands, paths, and code references
+## Voice
 
-## Content boundaries
+- Active voice, second person.
+- One idea per sentence. Cut hedges ("you can", "we recommend", "feel free to").
+- Concrete numbers over adjectives. "5 minutes" not "a short while".
+- Inline backticks for entities, endpoints, and field names: `Stream`, `/streams`, `frame_index`.
+- Sentence case headings.
+- No emoji. No marketing fluff.
 
-{/* Define what should and shouldn't be documented */}
-{/* Example: Don't document internal admin features */}
+## Canonical URLs
+
+- Base URL: `https://api.overshoot.ai/v1beta`
+- Stream media URL: `https://api.overshoot.ai/v1beta/streams/{stream_id}/media?<anchor>`
+- Dashboard: `https://platform.overshoot.ai`
+
+Use these consistently. Don't mix `dev-api` or `/v1` into customer-facing pages.
+
+## What not to document
+
+- Internal-only endpoints (`/spectate`, `/feedback`, `/info`, `/config/prompt`).
+- Stream behavior beyond what the public API guarantees.
+- Implementation details of the inference router.

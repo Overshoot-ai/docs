@@ -1,41 +1,141 @@
 ---
 title: "The Stream"
+description: "A leased session that holds your live video feed and makes it addressable from any chat completion."
 ---
 
 The core piece of Overshoot is the `Stream` entity.
 
-Clients can connect any live video source to Overshoot via the `Stream` entity.
-
-Creating a `Stream` is straightforward. Use the `/streams` endpoint with an API key as follows:
+Clients connect any live video source to Overshoot via the `Stream`. Creating one is straightforward — call `/streams` with an API key:
 
 ```shellscript
-curl -X POST <https://api.overshoot.ai/v1beta/streams>
+curl -X POST https://api.overshoot.ai/v1beta/streams \
+  -H "Authorization: Bearer $OVERSHOOT_API_KEY"
 ```
 
-This will return a `Stream ID` and a [Livekit room](https://docs.livekit.io/intro/basics/rooms-participants-tracks/rooms/). The user can then use any [Livekit SDK](https://docs.livekit.io/reference/) to join the room and publish their video stream to it. Our media gateway service will join the room, ingest your video stream and prepares it for inference.
+This returns a `stream_id` and a [LiveKit room](https://docs.livekit.io/intro/basics/rooms-participants-tracks/rooms/). Use any [LiveKit SDK](https://docs.livekit.io/reference/) to join the room and publish your video into it. Our media gateway joins the same room, ingests your stream, and prepares it for inference.
 
-Note that the `Stream` is a leased session. In other words, it will hold the state of your live video feed (up to 10min) as long as it’s alive. Read below on how to keep a stream alive.
+<Accordion title="Sample response">
+  ```json focus={2,3,5-8,9}
+  {
+    "id": "2ea5a604-d225-4cd2-82ac-b907cb0b4f63",
+    "state": "active",
+    "publish": {
+      "type": "livekit",
+      "url": "wss://livekit.overshoot.ai",
+      "token": "ey...k"
+    },
+    "expires_at_ms": 1777529931184,
+    "ttl_seconds": 300
+  }
+  ```
+</Accordion>
 
-## **Stream State**
+A `Stream` is a leased session: it holds the state of your live feed as long as it's alive. Read on for how to keep one alive — and how to kill it.
 
-The `Stream` session holds your video feed (up to a limit) as long as it’s alive. If you push no video feed to it, it will sit empty. You can check the state of a stream along with other attributes such as number of frames received, FPS and time to expiry as follows:
+## Stream state
+
+The `Stream` holds your video as long as it's alive. If you push no frames, it sits empty. To check the state — frames received, recent FPS, time to expiry — call:
 
 ```shellscript
-curl -X GET <https://api.overshoot.ai/v1beta/streams/{stream_id}>
+curl https://api.overshoot.ai/v1beta/streams/{stream_id} \
+  -H "Authorization: Bearer $OVERSHOOT_API_KEY"
 ```
 
-A `Stream` can die if it expires (5 min), gets deleted by the client or gets reaped. Read below on how to keep a stream alive.
+<Accordion title="Sample response">
+  ```json
+  {
+    "id": "2ea5a604-d225-4cd2-82ac-b907cb0b4f63",
+    "state": "active",
+    "stream_time_ms": 12480,
+    "first_frame_at_ms": 1777529631184,
+    "last_frame_at_ms":  1777529643664,
+    "last_frame_index": 312,
+    "recent_fps": 25.0,
+    "retained_frame_count": 312,
+    "evicted_frame_count": 0,
+    "expires_at_ms": 1777529931184,
+    "ttl_seconds": 300
+  }
+  ```
+</Accordion>
 
-## **How to kill and keep a stream alive**
+A `Stream` ends when it expires (5 min idle), gets `DELETE`d, or gets reaped by the system. Once `state` flips to `ended`, it stays ended — there is no resume.
 
-When Overshoot starts ingesting a stream, we do a lot of processing in the backend to have your stream easily accessible for any model you pick. To avoid starting a stream and forgetting about it, a stream will expire after 5 minutes unless the client renews the lease. To renew the lease, the client must call the `/keepalive` endpoint with their `Stream ID` regularly (e.g. every 2min).
+## How to keep a stream alive
+
+When Overshoot starts ingesting your stream, we run a fair amount of processing in the background to make every frame addressable for any model. To avoid leaking sessions, a stream expires 5 minutes after the last keepalive. Renew it by calling `/keepalive` with your `stream_id` regularly — every 2 minutes is a safe cadence.
 
 ```shellscript
-curl -X POST <https://api.overshoot.ai/streams/{stream_id}/keepalive>
+curl -X POST https://api.overshoot.ai/v1beta/streams/{stream_id}/keepalive \
+  -H "Authorization: Bearer $OVERSHOOT_API_KEY"
 ```
 
-Now that we understand how to keep a stream alive, how about killing the stream? Just use the `DELETE` method with your `Stream ID` .
+Each keepalive returns a fresh LiveKit token. Save it — if your publisher disconnects from the room, you'll need it to rejoin without recreating the stream.
+
+## How to kill a stream
+
+`DELETE` it.
 
 ```shellscript
-curl -X DELETE <https://api.overshoot.ai/streams/{stream_id}>
+curl -X DELETE https://api.overshoot.ai/v1beta/streams/{stream_id} \
+  -H "Authorization: Bearer $OVERSHOOT_API_KEY"
 ```
+
+<Visibility for="agents">
+
+## Lifecycle, in detail
+
+### States
+
+A `Stream` has exactly two states:
+
+- `active` — created, accepting publishers and inference. The default for any newly-created stream.
+- `ended` — terminal. Set once on TTL expiry, explicit delete, or system reaping. Never transitions back.
+
+`GET /streams/{id}` continues to return ended streams for a short tombstone window with `state: "ended"`, `ended_at_ms`, and `end_reason`. After the tombstone window the endpoint returns `404`.
+
+### TTL and keepalive
+
+- Default TTL: **300 seconds** (`ttl_seconds: 300`) from the most recent of: creation, keepalive, or last activity signal.
+- Each successful `POST /keepalive` resets the lease to `now + ttl_seconds` and returns a new `expires_at_ms` plus a fresh LiveKit `token`.
+- Recommended polling cadence: every 60–120s. Don't rely on TTL minus one second; clock skew between caller and server is real.
+- A stream with `state: "ended"` cannot be revived by a keepalive. Create a new stream instead.
+
+### Stream status fields
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | uuid | Stable for the lifetime of the stream. |
+| `state` | enum | `active` \| `ended`. |
+| `stream_time_ms` | float | Stream-clock position in ms — monotonic from first frame. |
+| `first_frame_at_ms` | int | Wall-clock ms of the first frame ingested. |
+| `last_frame_at_ms` | int | Wall-clock ms of the most recent frame. |
+| `last_frame_index` | int | Lifetime-indexed position of the most recent frame. |
+| `first_available_frame_at_ms` | int | Wall-clock ms of the oldest retained frame. |
+| `first_available_frame_index` | int | Lifetime index of the oldest retained frame. |
+| `recent_fps` | float | Rolling FPS over the last few seconds of ingest. |
+| `retained_frame_count` | int | Frames currently retained in the buffer. |
+| `evicted_frame_count` | int | Frames that have aged out of retention. |
+| `created_at_ms` | int | Wall-clock ms of stream creation. |
+| `expires_at_ms` | int | Wall-clock ms when the lease will expire if not renewed. |
+| `ttl_seconds` | int | Configured TTL — currently 300 for all streams. |
+| `ended_at_ms` | int? | Set when `state == "ended"`. |
+| `end_reason` | string? | `expired` \| `deleted` \| `reaped`. |
+| `audio` | bool | Reserved. Always `false`. |
+
+### Frame indexing semantics
+
+`frame_index` is monotonically increasing across the stream's lifetime. It is *not* reset by eviction. If you reference a `frame_index` that's older than `first_available_frame_index`, the URL resolver clamps to `first_available_frame_index` (intersection-with-availability semantics) — your request succeeds against the oldest frame still in the buffer. The same applies to `start_frame_index` for video segments.
+
+Negative indices are interpreted relative to `last_frame_index` at request time: `frame_index=-1` is "most recent", `-2` is the one before, and so on.
+
+### Errors
+
+| Code | Meaning |
+|---|---|
+| `401`/`403` | Missing or invalid API key. |
+| `402` | Insufficient credits to create a new stream. |
+| `404` | Stream not found, ended past the tombstone window, or owned by a different API key. |
+| `503` | Ingest service draining or starting up — retry with backoff. |
+
+</Visibility>
