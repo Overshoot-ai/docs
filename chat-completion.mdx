@@ -7,13 +7,13 @@ Overshoot's `/chat/completions` is OpenAI-compatible. Everything you already kno
 
 The piece that's specific to us is **how you reference your video**. When you create a stream, every moment of it becomes addressable by URL. You drop those URLs into a chat message — as `image_url` for a single frame, or `video_url` for a window — and the model sees them as visual context.
 
-## The URL
+## The reference URI
 
 ```
-https://api.overshoot.ai/v1beta/streams/{stream_id}/media?<anchor>
+ovs://streams/{stream_id}?<anchor>
 ```
 
-That's it. The path is fixed. Everything interesting lives in the query string. Set the right query and you can point at:
+That's it. The `ovs://` scheme is a reference identifier — the server parses out `stream_id` and the query, then resolves frames internally. It's not a URL you fetch. Everything interesting lives in the query string. Set the right query and you can point at:
 
 - the most recent frame,
 - a specific frame number,
@@ -36,7 +36,7 @@ A single frame needs **exactly one** of these query params:
 {
   "type": "image_url",
   "image_url": {
-    "url": "https://api.overshoot.ai/v1beta/streams/{stream_id}/media?frame_index=-1"
+    "url": "ovs://streams/{stream_id}?frame_index=-1"
   }
 }
 ```
@@ -79,7 +79,7 @@ You can mix anchor types — `start_offset_ms=-30000&end_frame_index=523` is fin
 {
   "type": "video_url",
   "video_url": {
-    "url": "https://api.overshoot.ai/v1beta/streams/{stream_id}/media?start_offset_ms=-5000"
+    "url": "ovs://streams/{stream_id}?start_offset_ms=-5000"
   }
 }
 ```
@@ -88,7 +88,7 @@ You can mix anchor types — `start_offset_ms=-30000&end_frame_index=523` is fin
 {
   "type": "video_url",
   "video_url": {
-    "url": "https://api.overshoot.ai/v1beta/streams/{stream_id}/media?start_timestamp_ms=60000&end_timestamp_ms=70000"
+    "url": "ovs://streams/{stream_id}?start_timestamp_ms=60000&end_timestamp_ms=70000"
   }
 }
 ```
@@ -97,7 +97,7 @@ You can mix anchor types — `start_offset_ms=-30000&end_frame_index=523` is fin
 {
   "type": "video_url",
   "video_url": {
-    "url": "https://api.overshoot.ai/v1beta/streams/{stream_id}/media?start_frame_index=1200&end_frame_index=1500"
+    "url": "ovs://streams/{stream_id}?start_frame_index=1200&end_frame_index=1500"
   }
 }
 ```
@@ -150,9 +150,9 @@ Override it with `max_fps`:
 </Accordion>
 
 <Accordion title="The model never fetches the URL itself" icon="server">
-  Overshoot resolves stream URLs server-side before forwarding to the model. The URL doesn't need to be reachable from the model's network; it's just an addressing scheme.
+  `ovs://` is a reference scheme, not a fetchable URL. The server parses `stream_id` and the query out of it and resolves frames internally; nothing makes an HTTP request to it. The model never sees the URI either — Overshoot rewrites the content parts into resolved frames before forwarding to the model.
 
-  Hostname can be any subdomain of `overshoot.ai` (`api`, `dev-api`, etc.) and the path version segment can be any `v*` — the parser is permissive about both. Stick to `https://api.overshoot.ai/v1beta/...` unless you have a reason not to.
+  That's the whole reason for `ovs://` — the old `https://api.overshoot.ai/v1beta/streams/{id}/media?...` shape looked fetchable but never was, which confused enough people that we cut it.
 </Accordion>
 
 </AccordionGroup>
@@ -188,7 +188,7 @@ Override it with `max_fps`:
         "content": [
           { "type": "text", "text": "What does it say on my shirt?" },
           { "type": "image_url", "image_url": {
-              "url": "https://api.overshoot.ai/v1beta/streams/$STREAM_ID/media?frame_index=-1"
+              "url": "ovs://streams/$STREAM_ID?frame_index=-1"
           }}
         ]
       }]
@@ -217,16 +217,15 @@ Override it with `max_fps`:
 
 <Visibility for="agents">
 
-## URL grammar — full spec
+## URI grammar — full spec
 
 ```
-https://<host>.overshoot.ai/v<version>/streams/{stream_id}/media?<query>
+ovs://streams/{stream_id}?<query>
 ```
 
-- `host` — any subdomain of `overshoot.ai` (`api`, `dev-api`, etc.). Use `api` in production.
-- `version` — any `v*` segment (`v1`, `v1beta`, etc.). Current is `v1beta`.
-- Path **must** end with `/media`. URLs that match the host pattern but not this exact path return `422`.
-- The model resolver fetches the URL server-side; the model itself never sees the HTTP URL.
+- Scheme **must** be `ovs://`. Any other scheme (including `https://`) returns `422 stream_url_invalid`.
+- Authority **must** be `streams`. The path component **must** be `/{stream_id}` — exactly one segment, the UUID returned by `POST /streams`.
+- `ovs://` is a reference identifier the server parses to extract `stream_id` and the query. No HTTP fetch ever happens against this URI; the model resolver looks frames up internally.
 
 ### `image_url` query params
 
@@ -328,7 +327,7 @@ The endpoint accepts unknown top-level fields and forwards them to the upstream 
 |---|---|---|
 | `401` / `403` | — | Missing or invalid API key. |
 | `404` | — | `stream_id` doesn't exist or isn't owned by your key. |
-| `422` | `stream_url_invalid` | URL host matches `*.overshoot.ai` but path isn't `/streams/{id}/media`. |
+| `422` | `stream_url_invalid` | URI scheme isn't `ovs://`, or the path isn't `streams/{id}`. |
 | `422` | `query_param_invalid` | Wrong anchor count, unknown query key, malformed value, duplicate key, out-of-range `frame_index`, etc. |
 | `422` | `model_not_found` | `model` field doesn't match any entry in `GET /models` (or model is not currently `ready`). |
 | `503` | — | No replica is currently serving the requested model. Retry, or list `/models` and fall back. |

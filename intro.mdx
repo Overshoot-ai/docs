@@ -39,11 +39,13 @@ See the [Glossary](/glossary) for canonical definitions of every term used acros
 
 A `Stream` is a leased server-side handle for a live video feed. Once a publisher is attached (via the LiveKit room URL + token returned at creation), Overshoot ingests frames continuously and indexes them. The handle is opaque from the model's perspective — you reference moments inside the stream by URL, not by uploading bytes.
 
-A chat completion request is OpenAI-compatible. The only Overshoot-specific construct is the URL inside `image_url` / `video_url` content parts:
+A chat completion request is OpenAI-compatible. The only Overshoot-specific construct is the URI inside `image_url` / `video_url` content parts:
 
 ```
-https://api.overshoot.ai/v1beta/streams/{stream_id}/media?<anchor>
+ovs://streams/{stream_id}?<anchor>
 ```
+
+The `ovs://` scheme is a reference identifier — the server parses `stream_id` and the query out of it and resolves frames internally. It is not a fetchable URL.
 
 Where `<anchor>` is exactly one of:
 

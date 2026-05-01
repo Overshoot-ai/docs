@@ -131,9 +131,10 @@ paths:
       summary: Chat completions
       description: |
         OpenAI-compatible chat completions endpoint. To reference frames from a live stream,
-        include a `video_url` or `image_url` content part whose URL points at
-        `/v1beta/streams/{stream_id}/media` with a `start_offset_ms` (relative to live edge),
-        `frame_index`, `timestamp_ms`, or `offset_ms` query param.
+        include a `video_url` or `image_url` content part whose URL uses the
+        `ovs://streams/{stream_id}?...` reference scheme with a `start_offset_ms` (relative to
+        live edge), `frame_index`, `timestamp_ms`, or `offset_ms` query param. The `ovs://`
+        URI is a reference identifier the server parses, not a fetchable URL.
       requestBody:
         required: true
         content:
@@ -151,10 +152,10 @@ paths:
                           text: What does it say on my shirt?
                         - type: video_url
                           video_url:
-                            url: https://api.overshoot.ai/v1beta/streams/cc3e3f79-c5c4-4d1c-985e-028b42030569/media?start_offset_ms=-5000
+                            url: ovs://streams/cc3e3f79-c5c4-4d1c-985e-028b42030569?start_offset_ms=-5000
                         - type: image_url
                           image_url:
-                            url: https://api.overshoot.ai/v1beta/streams/cc3e3f79-c5c4-4d1c-985e-028b42030569/media?frame_index=-1
+                            url: ovs://streams/cc3e3f79-c5c4-4d1c-985e-028b42030569?frame_index=-1
       responses:
         "200":
           description: Completion response.
@@ -368,8 +369,8 @@ components:
       type: object
       description: |
         OpenAI-compatible. Permissive — unknown fields are accepted and ignored. To reference
-        a stream's frames, include `video_url` or `image_url` content parts pointing at
-        `/v1beta/streams/{stream_id}/media`.
+        a stream's frames, include `video_url` or `image_url` content parts whose URL uses the
+        `ovs://streams/{stream_id}?...` reference scheme.
       additionalProperties: true
       properties:
         model:
@@ -431,8 +432,9 @@ components:
             url:
               type: string
               description: |
-                Either an HTTPS image URL or an Overshoot stream frame URL like
-                `https://api.overshoot.ai/v1beta/streams/{stream_id}/media?frame_index=-1`.
+                Either an HTTPS image URL or an Overshoot stream frame reference like
+                `ovs://streams/{stream_id}?frame_index=-1`. The `ovs://` URI is a
+                reference identifier the server parses, not a fetchable URL.
 
                 Required: exactly one of `frame_index` (lifetime index; `-1` = latest),
                 `timestamp_ms` (absolute stream-clock ms), or `offset_ms` (offset from now;
@@ -455,9 +457,10 @@ components:
             url:
               type: string
               description: |
-                Overshoot stream segment URL, e.g.
-                `https://api.overshoot.ai/v1beta/streams/{stream_id}/media?start_offset_ms=-5000`
-                (last 5 seconds).
+                Overshoot stream segment reference, e.g.
+                `ovs://streams/{stream_id}?start_offset_ms=-5000`
+                (last 5 seconds). The `ovs://` URI is a reference identifier the server
+                parses, not a fetchable URL.
 
                 Required: exactly one start anchor — `start_frame_index`, `start_timestamp_ms`,
                 or `start_offset_ms`.

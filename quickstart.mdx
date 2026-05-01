@@ -61,7 +61,7 @@ description: "From a fresh API key to a model describing your webcam — in four
           "content": [
             { "type": "text", "text": "What am I wearing?" },
             { "type": "image_url", "image_url": {
-                "url": "https://api.overshoot.ai/v1beta/streams/$STREAM_ID/media?frame_index=-1"
+                "url": "ovs://streams/$STREAM_ID?frame_index=-1"
             }}
           ]
         }]
@@ -138,7 +138,7 @@ curl -X POST https://api.overshoot.ai/v1beta/chat/completions \
       \"content\": [
         { \"type\": \"text\", \"text\": \"What am I wearing?\" },
         { \"type\": \"image_url\", \"image_url\": {
-            \"url\": \"https://api.overshoot.ai/v1beta/streams/$STREAM_ID/media?frame_index=-1\"
+            \"url\": \"ovs://streams/$STREAM_ID?frame_index=-1\"
         }}
       ]
     }]
