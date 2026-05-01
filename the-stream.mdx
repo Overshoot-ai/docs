@@ -8,7 +8,7 @@ The core primitive in Overshoot is the `Stream`.
 Clients connect any live video source to Overshoot via the `Stream`. Creating one is straightforward — call `/streams` with an API key:
 
 ```shellscript
-curl -X POST https://api.overshoot.ai/v1beta/streams \
+curl -X POST https://api.overshoot.ai/v1/streams \
   -H "Authorization: Bearer $OVERSHOOT_API_KEY"
 ```
 
@@ -39,7 +39,7 @@ The `Stream` holds your video as long as it's alive. If you push no frames, it s
 To check the state (e.g. frames received, recent FPS, time to expiry, etc.), call:
 
 ```shellscript
-curl https://api.overshoot.ai/v1beta/streams/{stream_id} \
+curl https://api.overshoot.ai/v1/streams/{stream_id} \
   -H "Authorization: Bearer $OVERSHOOT_API_KEY"
 ```
 
@@ -68,7 +68,7 @@ A `Stream` ends when it expires (5 min idle), gets `DELETE`d, or gets reaped by 
 When Overshoot starts ingesting your stream, we run a fair amount of processing in the background to make every frame available for any model. To avoid leaking sessions, a stream will expire after 5 minutes. To keep it alive, call `/keepalive` with your `stream_id` regularly. Every 2 minutes is a safe cadence.
 
 ```shellscript
-curl -X POST https://api.overshoot.ai/v1beta/streams/{stream_id}/keepalive \
+curl -X POST https://api.overshoot.ai/v1/streams/{stream_id}/keepalive \
   -H "Authorization: Bearer $OVERSHOOT_API_KEY"
 ```
 
@@ -79,7 +79,7 @@ Each keepalive returns a fresh LiveKit token. Save it — if your publisher disc
 `DELETE` it.
 
 ```shellscript
-curl -X DELETE https://api.overshoot.ai/v1beta/streams/{stream_id} \
+curl -X DELETE https://api.overshoot.ai/v1/streams/{stream_id} \
   -H "Authorization: Bearer $OVERSHOOT_API_KEY"
 ```
 

@@ -12,20 +12,20 @@ Availability changes as endpoints come online and go offline. Always query `/mod
 <CodeGroup>
 
 ```shellscript curl
-curl https://api.overshoot.ai/v1beta/models
+curl https://api.overshoot.ai/v1/models
 ```
 
 ```python python
 import httpx
 
-r = httpx.get("https://api.overshoot.ai/v1beta/models")
+r = httpx.get("https://api.overshoot.ai/v1/models")
 ready = [m for m in r.json()["data"] if m["status"] == "ready"]
 for m in ready:
     print(m["id"])
 ```
 
 ```typescript typescript
-const res = await fetch("https://api.overshoot.ai/v1beta/models");
+const res = await fetch("https://api.overshoot.ai/v1/models");
 const { data } = await res.json();
 const ready = data.filter((m) => m.status === "ready");
 ```
@@ -123,7 +123,7 @@ The response is OpenAI-compatible — same shape `listModels` returns, with one 
 Pass the `id` from `/models` straight into `/chat/completions`:
 
 ```shellscript wrap
-curl -X POST https://api.overshoot.ai/v1beta/chat/completions \
+curl -X POST https://api.overshoot.ai/v1/chat/completions \
   -H "Authorization: Bearer $OVERSHOOT_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -151,7 +151,7 @@ See [Chat Completion](/chat-completion) for the full request/response shape.
 
   ### Selection algorithm
 
-  1. `GET /v1beta/models`. The response is a list. Filter to entries with `status == "ready"`.
+  1. `GET /v1/models`. The response is a list. Filter to entries with `status == "ready"`.
   2. Pick a model `id` whose properties match the workload (see the table above).
   3. Use that exact `id` as the `model` field in `/chat/completions`.
 
@@ -184,13 +184,13 @@ See [Chat Completion](/chat-completion) for the full request/response shape.
   ```python
   import httpx
 
-  resp = httpx.get("https://api.overshoot.ai/v1beta/models", timeout=5)
+  resp = httpx.get("https://api.overshoot.ai/v1/models", timeout=5)
   resp.raise_for_status()
   ready_ids = [m["id"] for m in resp.json()["data"] if m["status"] == "ready"]
   ```
 
   ```typescript
-  const res = await fetch("https://api.overshoot.ai/v1beta/models");
+  const res = await fetch("https://api.overshoot.ai/v1/models");
   if (!res.ok) throw new Error(`models: ${res.status}`);
   const { data } = (await res.json()) as { data: Array<{ id: string; status: string }> };
   const ready = data.filter((m) => m.status === "ready").map((m) => m.id);

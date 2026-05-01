@@ -42,7 +42,7 @@ Use these terms consistently. Don't invent synonyms.
 
 ## Canonical URLs
 
-- Base URL: `https://api.overshoot.ai/v1beta`
+- Base URL: `https://api.overshoot.ai/v1`
 - Stream media reference: `ovs://streams/{stream_id}?<anchor>` (a reference identifier the server parses, not a fetchable URL)
 - Dashboard: `https://platform.overshoot.ai`
 
@@ -52,15 +52,15 @@ Use these consistently. Don't mix `dev-api` or `/v1` into customer-facing pages.
 
 The site publishes two API versions:
 
-- **v1beta** — current. All new content (guides, examples, API reference) targets v1beta unless the file path is explicitly under `api-reference/v0.2/`.
+- **v1** — current. All new content (guides, examples, API reference) targets v1 unless the file path is explicitly under `api-reference/v0.2/`.
 - **v0.2** — legacy. Kept on the site as a deprecated reference for existing integrations. Never recommend v0.2 patterns in new content. Every v0.2 page must keep its deprecation banner.
 
-Mintlify's auto-generated `/llms.txt` and `/llms-full.txt` index only the default version (v1beta), so agents reading the docs through those surfaces never see v0.2 — the intended behaviour. Don't fight it.
+Mintlify's auto-generated `/llms.txt` and `/llms-full.txt` index only the default version (v1), so agents reading the docs through those surfaces never see v0.2 — the intended behaviour. Don't fight it.
 
 ## What not to document
 
-- In v1beta content, never reference v0.2-only endpoints (`/spectate`, `/feedback`, `/info`, `/config/prompt`, `/update-prompt`). They live exclusively under `api-reference/v0.2/` as deprecated reference.
-- Stream behavior beyond what the public v1beta API guarantees.
+- In v1 content, never reference v0.2-only endpoints (`/spectate`, `/feedback`, `/info`, `/config/prompt`, `/update-prompt`). They live exclusively under `api-reference/v0.2/` as deprecated reference.
+- Stream behavior beyond what the public v1 API guarantees.
 - Implementation details of the inference router.
 - Anything related to internal admin tooling, the dev portal, or backend microservice architecture.
 
