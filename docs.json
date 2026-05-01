@@ -2,6 +2,7 @@
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
   "name": "Overshoot",
+  "description": "Overshoot is a real-time video understanding API: ingest live frames over WebRTC and query them with vision-language models through an OpenAI-compatible interface.",
   "colors": {
     "primary": "#171717",
     "light": "#FAFAFA",
@@ -23,6 +24,7 @@
               "the-stream",
               "chat-completion",
               "models",
+              "glossary",
               "best-practices"
             ]
           },
@@ -116,9 +118,8 @@
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/overshoot_ai",
       "github": "https://github.com/overshoot-ai",
-      "linkedin": "https://linkedin.com/company/overshoot-ai"
+      "linkedin": "https://linkedin.com/company/overshootai"
     }
   }
 }
