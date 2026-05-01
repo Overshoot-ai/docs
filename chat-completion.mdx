@@ -64,6 +64,27 @@ A Chat Completion Request contains primarily two attributes:
 Almost all inference providers today provide Chat Completion inference endpoints. You can either call it over raw HTTP or using the `openai` SDK.
 
 <Accordion title="Example of Chat Completion request using OpenAI python library">
+  ```python
+  import os
+  from openai import OpenAI
+
+  client = OpenAI(
+      base_url="https://api.overshoot.ai/v1beta",
+      api_key=os.environ["OVERSHOOT_API_KEY"],
+  )
+
+  response = client.chat.completions.create(
+      model="google/gemma-4-E4B-it",
+      messages=[
+          {"role": "system", "content": "You are a helpful assistant"},
+          {"role": "user", "content": "what is the capital of france?"},
+          {"role": "assistant", "content": "the capital of france is paris."},
+          {"role": "user", "content": "how about morocco?"},
+      ],
+  )
+
+  print(response.choices[0].message.content)
+  ```
 </Accordion>
 
 When the inference provider receives the request, they use the models' [chat template](https://huggingface.co/docs/transformers/en/chat_templating) to turn it into a single string and tokenize it. In the example above, the inference provider will respond with "Rabat".
