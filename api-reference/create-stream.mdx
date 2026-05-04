@@ -1,6 +1,6 @@
 ---
-title: Create stream
-openapi: 'POST /streams'
+title: "Create stream"
+openapi: "api-reference/openapi.yaml POST /streams"
 ---
 
 ## What you get
@@ -8,7 +8,7 @@ openapi: 'POST /streams'
 The response carries:
 
 - **`id`** — pass this in every later URL: `/v1/streams/{id}/...` plus stream URLs you embed in chat completion messages.
-- **`publish.url`** + **`publish.token`** — feed these to a [LiveKit client SDK](https://docs.livekit.io/reference/) to connect a video source. Any LiveKit publisher works (browser, native, server-to-server). The token is short-lived; use the one returned by `/keepalive` if your publisher reconnects later.
-- **`expires_at_ms`** + **`ttl_seconds`** — the lease deadline. Call `/keepalive` before it elapses (every ~2 minutes is safe). After expiry the stream's `state` flips to `ended` and stays there.
+- **`publish.url`** \+ **`publish.token`** — feed these to a [LiveKit client SDK](https://docs.livekit.io/reference/) to connect a video source. Any LiveKit publisher works (browser, native, server-to-server). The token is short-lived; use the one returned by `/keepalive` if your publisher reconnects later.
+- **`expires_at_ms`** \+ **`ttl_seconds`** — the lease deadline. Call `/keepalive` before it elapses (every ~2 minutes is safe). After expiry the stream's `state` flips to `ended` and stays there.
 
 The stream sits in `active` state immediately, even before the first frame arrives. `GET /streams/{id}` returns `last_frame_at_ms: null` until a publisher actually delivers a frame.
