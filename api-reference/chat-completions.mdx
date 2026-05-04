@@ -1,6 +1,6 @@
 ---
-title: Chat completions
-openapi: 'POST /chat/completions'
+title: "Chat completions"
+openapi: "api-reference/openapi.yaml POST /chat/completions"
 ---
 
 ## Referencing a stream
@@ -12,7 +12,7 @@ The `messages[].content[]` array accepts standard OpenAI content parts plus two 
 
 Both wrap an `ovs://` reference of the form:
 
-```
+```text
 ovs://streams/{stream_id}?<query>
 ```
 
@@ -23,11 +23,11 @@ The `ovs://` scheme is a reference identifier — the server parses it to pull o
 For `type: "image_url"`. **Exactly one** anchor is required.
 
 | Param | Type | Required | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `frame_index` | int | Anchor (one of) | Lifetime-indexed frame number. Negative = relative to live edge; `-1` is the most recent frame. |
 | `timestamp_ms` | int | Anchor (one of) | Absolute stream-clock ms since `first_frame_at_ms`. |
 | `offset_ms` | int | Anchor (one of) | Offset relative to "now" (live edge at request time). Negative = past. |
-| `tolerance_ms` | int (>0) | Optional | How far the resolver may snap to find a frame. **Default `100`. Ignored when `frame_index` is set.** |
+| `tolerance_ms` | int (\>0) | Optional | How far the resolver may snap to find a frame. **Default `100`. Ignored when `frame_index` is set.** |
 | `direction` | enum | Optional | `nearest` \| `forward` \| `backward`. Resolution preference when no exact match within tolerance. **Default `nearest`. Ignored when `frame_index` is set.** |
 
 ```json
@@ -41,14 +41,14 @@ For `type: "image_url"`. **Exactly one** anchor is required.
 For `type: "video_url"`. Requires **one start anchor**, accepts **one optional end anchor** (defaults to the live edge), plus an optional `max_fps`.
 
 | Param | Type | Required | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `start_frame_index` | int | Start anchor (one of) | Lifetime index where the segment begins. |
 | `start_timestamp_ms` | int | Start anchor (one of) | Absolute stream-clock ms where the segment begins. |
 | `start_offset_ms` | int | Start anchor (one of) | Offset from now where the segment begins. Negative = past (e.g. `-5000` is "5s ago"). |
 | `end_frame_index` | int | End anchor (optional) | Lifetime index where the segment ends. |
 | `end_timestamp_ms` | int | End anchor (optional) | Absolute stream-clock ms where the segment ends. |
 | `end_offset_ms` | int | End anchor (optional) | Offset from now where the segment ends. |
-| `max_fps` | float (>0) | Optional | Cap on frames per second sampled from the segment. **Default `1.0`.** Halving `max_fps` halves visual tokens. |
+| `max_fps` | float (\>0) | Optional | Cap on frames per second sampled from the segment. **Default `1.0`.** Halving `max_fps` halves visual tokens. |
 
 Start and end anchor types may differ — `start_offset_ms=-30000&end_frame_index=523` is valid.
 
@@ -64,7 +64,7 @@ Start and end anchor types may differ — `start_offset_ms=-30000&end_frame_inde
 - **Old frames clamp.** A `frame_index` (or `start_frame_index`) older than `first_available_frame_index` clamps up to the oldest available frame. Request **succeeds**, possibly on a different frame than asked.
 - **Future frames fail.** A `frame_index` newer than `last_frame_index` returns `422`. There is no "wait until that frame arrives".
 - **Duplicate query keys** (`?frame_index=1&frame_index=2`) → `422`.
-- **Setting more than one anchor** of the same kind (e.g. two `start_*`, or `frame_index` + `timestamp_ms`) → `422`.
+- **Setting more than one anchor** of the same kind (e.g. two `start_*`, or `frame_index` \+ `timestamp_ms`) → `422`.
 
 ### Example — single-frame question
 
