@@ -6,7 +6,7 @@ description: "Browser example showing how to create a stream, publish via LiveKi
 ```js
 import { Room, createLocalTracks } from "livekit-client";
 
-const API = "https://api.overshoot.ai/v1";
+const API = "https://api.overshoot.ai/v1beta";
 
 async function createStream(apiKey) {
   const res = await fetch(`${API}/streams`, {

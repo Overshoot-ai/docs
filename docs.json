@@ -48,10 +48,14 @@
                 ]
               },
               {
-                "group": "Models",
+                "group": "Models & pricing",
                 "icon": "microchip-ai",
                 "pages": [
-                  "api-reference/list-models"
+                  "api-reference/list-models",
+                  "api-reference/list-pricing",
+                  "api-reference/get-pricing",
+                  "api-reference/get-balance",
+                  "api-reference/create-checkout"
                 ]
               },
               {
