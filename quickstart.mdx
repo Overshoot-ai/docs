@@ -285,7 +285,7 @@ export const ModelFiller = ({ placeholder, label, storageKey }) => {
 
     <FillerCard>
       <ModelFiller
-        placeholder="google/gemma-4-E4B-it"
+        placeholder="google/gemma-4-26B-A4B-it"
         label="Model — pulled live from the API"
         storageKey="overshoot_model"
       />
@@ -302,7 +302,7 @@ export const ModelFiller = ({ placeholder, label, storageKey }) => {
     -H "Authorization: Bearer $OVERSHOOT_API_KEY" \
     -H "Content-Type: application/json" \
     -d '{
-    "model": "google/gemma-4-E4B-it",
+    "model": "google/gemma-4-26B-A4B-it",
     "messages": [
         {
         "role": "user",
@@ -321,7 +321,7 @@ export const ModelFiller = ({ placeholder, label, storageKey }) => {
           "id": "34225b75-abae-4c58-8191-2abdc8f437de",
           "object": "chat.completion",
           "created": 1777530304,
-          "model": "google/gemma-4-E4B-it",
+          "model": "google/gemma-4-26B-A4B-it",
           "choices": [
               {
                   "index": 0,
