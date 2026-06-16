@@ -187,7 +187,7 @@ export const ModelFiller = ({ placeholder, label, storageKey }) => {
 
   useEffect(() => {
     let cancelled = false
-    fetch('https://api.overshoot.ai/v1/models')
+    fetch('https://api.overshoot.ai/v1beta/models')
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error('fetch failed'))))
       .then((data) => {
         if (cancelled) return
@@ -253,7 +253,7 @@ export const ModelFiller = ({ placeholder, label, storageKey }) => {
     </FillerCard>
 
     ```shellscript
-    curl -X POST https://api.overshoot.ai/v1/streams \
+    curl -X POST https://api.overshoot.ai/v1beta/streams \
     -H "Authorization: Bearer $OVERSHOOT_API_KEY"
     ```
 
@@ -298,7 +298,7 @@ export const ModelFiller = ({ placeholder, label, storageKey }) => {
     </FillerCard>
 
     ```shellscript highlight={12} wrap
-    curl -X POST https://api.overshoot.ai/v1/chat/completions \
+    curl -X POST https://api.overshoot.ai/v1beta/chat/completions \
     -H "Authorization: Bearer $OVERSHOOT_API_KEY" \
     -H "Content-Type: application/json" \
     -d '{
