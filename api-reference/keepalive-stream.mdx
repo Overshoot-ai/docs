@@ -5,7 +5,7 @@ openapi: 'POST /streams/{stream_id}/keepalive'
 
 ## When to call
 
-Streams are reaped 5 minutes after the last keepalive (or creation, if no keepalive has happened yet). Call `/keepalive` every ~2 minutes — clock skew is real and the cost of a missed renewal is the whole stream.
+Streams expire 5 minutes after the last keepalive (or creation, if no keepalive has happened yet). Call `/keepalive` every ~2 minutes — clock skew is real and the cost of a missed renewal is the whole stream.
 
 A keepalive on a stream that's already `ended` returns `404`. Streams cannot be revived; create a new one.
 

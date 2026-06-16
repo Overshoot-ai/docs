@@ -14,7 +14,7 @@ A leased live-video session. A Stream holds the most recent window of frames you
 - Renewed by [`POST /streams/{stream_id}/keepalive`](/api-reference/keepalive-stream).
 - Deleted by [`DELETE /streams/{stream_id}`](/api-reference/delete-stream).
 
-A Stream ends when the lease expires (5 minutes idle), the client deletes it, or the platform reaps it. See [The Stream](/the-stream) for the full lifecycle.
+A Stream ends when the lease expires (5 minutes idle) or the client deletes it. See [The Stream](/the-stream) for the full lifecycle.
 
 ## `stream_id`
 
