@@ -33,6 +33,10 @@
             "icon": "code",
             "pages": [
               "api-reference/introduction",
+              "api-reference/authentication",
+              "api-reference/core-flow",
+              "api-reference/stream-lifecycle",
+              "api-reference/stream-media-urls",
               {
                 "group": "Streams",
                 "icon": "video",
@@ -56,7 +60,12 @@
                 "pages": [
                   "api-reference/chat-completions"
                 ]
-              }
+              },
+              "api-reference/livekit-client-flow",
+              "api-reference/regions",
+              "api-reference/prompt-cache",
+              "api-reference/errors",
+              "api-reference/limits"
             ]
           }
         ]

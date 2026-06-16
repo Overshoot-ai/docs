@@ -1,0 +1,105 @@
+---
+title: "Error shapes"
+description: "Status codes, error codes, and the JSON envelopes used across stream and chat endpoints."
+---
+
+Stream lifecycle endpoints use standard JSON error bodies:
+
+```json
+{ "detail": "Stream not found" }
+```
+
+Chat-completions errors are wrapped as:
+
+```json
+{
+  "detail": {
+    "error": {
+      "message": "Stream not found: <stream_id>",
+      "type": "stream_error",
+      "code": "stream_not_found"
+    }
+  }
+}
+```
+
+Validation failures from chat-completions use:
+
+```json
+{
+  "error": "validation_error",
+  "message": "Request validation failed",
+  "details": []
+}
+```
+
+## Status codes
+
+| Status | Meaning                                                                                                         |
+| -----: | --------------------------------------------------------------------------------------------------------------- |
+|  `400` | Invalid stream URL/query, invalid segment, unsupported model/media combination, or provider safety block.       |
+|  `401` | Missing or invalid bearer API key.                                                                              |
+|  `402` | Billing denied inference.                                                                                       |
+|  `403` | Valid key, but the requested resource belongs to another user.                                                  |
+|  `404` | Stream missing, stream deleted, lease expired, no retained frames matched, or pricing/model resource not found. |
+|  `409` | Wrong region, multiple stream regions, or requested lifetime frame index has not arrived yet.                   |
+|  `410` | Requested exact lifetime frame index has been evicted.                                                          |
+|  `422` | Request validation failed.                                                                                      |
+|  `429` | Per-user inference rate limit exceeded, or the model provider rate-limited the request.                         |
+|  `500` | Internal processing error.                                                                                      |
+|  `502` | Model provider request failed, unauthorized, or returned a server error.                                        |
+|  `503` | Service temporarily unavailable.                                                                                |
+|  `504` | Model provider request timed out.                                                                               |
+
+## Chat completions error codes
+
+| Code                      | Meaning                                                                  |
+| ------------------------- | ------------------------------------------------------------------------ |
+| `stream_url_invalid`      | URL used the `ovs://` scheme but did not match `ovs://streams/<id>?...`. |
+| `query_param_invalid`     | Missing, duplicate, unknown, or malformed media query parameter.         |
+| `stream_not_found`        | Stream is missing or unavailable.                                        |
+| `stream_unauthorized`     | API key user does not own the referenced stream.                         |
+| `segment_empty`           | No retained frames matched the requested media URL.                      |
+| `segment_invalid`         | Resolved video end is at or before the resolved start.                   |
+| `frame_evicted`           | Requested lifetime frame index has been evicted.                         |
+| `frame_not_yet_produced`  | Requested lifetime frame index has not arrived yet.                      |
+| `model_unavailable`       | The requested model is not currently available.                          |
+| `model_video_unsupported` | Requested a video segment for an image-only model/provider.              |
+| `provider_safety_block`   | Provider accepted the request but blocked the content.                   |
+| `billing_denied`          | Billing state denied the inference request.                              |
+| `upstream_http_<status>`  | The model provider returned a non-200 HTTP status.                       |
+| `upstream_timeout`        | The model provider timed out.                                            |
+| `upstream_request_failed` | The model provider request failed before a response was received.        |
+
+## Upstream provider errors
+
+Model provider errors preserve the provider status and a bounded response body when available:
+
+```json
+{
+  "detail": {
+    "error": {
+      "message": "Upstream model error",
+      "type": "upstream_error",
+      "code": "upstream_http_400",
+      "upstream": {
+        "provider": "google",
+        "status": 400,
+        "body": { "error": { "message": "..." } },
+        "rate_limits": null
+      }
+    }
+  }
+}
+```
+
+## Rate limit headers
+
+Per-user inference rate limiting is configurable. Successful and `429` responses include:
+
+| Header                  | Meaning                                           |
+| ----------------------- | ------------------------------------------------- |
+| `x-ratelimit-limit`     | Current per-user request-per-second limit.        |
+| `x-ratelimit-remaining` | Remaining requests in the current second.         |
+| `x-ratelimit-reset`     | Epoch time when the current second window resets. |
+| `retry-after`           | Present on 429; currently `1`.                    |

@@ -1,0 +1,36 @@
+---
+title: "Prompt cache and threads"
+description: "Reuse cached prompt prefixes across related chat completion requests."
+---
+
+Use the same `thread_id` for related requests in the same user conversation and model to improve prompt-cache reuse when available.
+
+```json
+{
+  "model": "google/gemma-4-26B-A4B-it",
+  "thread_id": "session-123",
+  "messages": [{ "role": "user", "content": "Continue from our previous context." }]
+}
+```
+
+Cache observability is returned under `overshoot.cache`:
+
+```json
+{
+  "overshoot": {
+    "cache": {
+      "thread_id": "session-123",
+      "cache_hit": true,
+      "cached_input_tokens": 5000
+    }
+  }
+}
+```
+
+- `thread_id` is the ID you supplied, or `null` when none was provided.
+- `cache_hit` is true when cached prompt tokens were reported.
+- `cached_input_tokens` is the number of prompt tokens served from prefix cache.
+
+<Note>
+  Cache metadata is observability only. It is not a guarantee that future requests will receive a cache hit.
+</Note>

@@ -1,0 +1,20 @@
+---
+title: "Authentication"
+description: "Bearer API keys for every public HTTP request, except the open model and pricing endpoints."
+---
+
+Every public HTTP request requires a bearer API key, except [list models](/api-reference/list-models) and the public pricing endpoints.
+
+```http
+Authorization: Bearer <api_key>
+```
+
+- `401` — the key is missing, unknown, or revoked.
+- `403` — the key is valid but cannot access the requested resource.
+- The publish token returned by [`POST /streams`](/api-reference/create-stream) is only for publishing media. It does **not** replace the API key for HTTP calls.
+
+Keys are prefixed with `ovs-` and managed in the [Overshoot dashboard](https://platform.overshoot.ai).
+
+<Note>
+  Calls using your API key incur cost. Treat keys as secrets — never commit them or expose them in client-side code.
+</Note>
