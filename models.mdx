@@ -179,11 +179,10 @@ See [Chat Completion](/chat-completion) for the full request/response shape.
 
   ### Status values
 
-  | Status    | Meaning                                  | What to do                                        |
-  | --------- | ---------------------------------------- | ------------------------------------------------- |
-  | `ready`   | At least one healthy replica is serving. | Use it.                                           |
-  | `loading` | Replicas are coming up.                  | May become ready in seconds — don't depend on it. |
-  | (omitted) | Not currently serving.                   | Don't use; not in the response.                   |
+  | Status        | Meaning                                  | What to do                                                |
+  | ------------- | ---------------------------------------- | --------------------------------------------------------- |
+  | `ready`       | At least one healthy replica is serving. | Use it.                                                   |
+  | `unavailable` | Currently not serving.                   | Don't use — retry later or fall through to another model. |
 
   A model that's `ready` at list-time can return `503` at completion-time if the only replica fell over between calls. Always handle `503` with either a retry or a fallback to another `ready` model.
 

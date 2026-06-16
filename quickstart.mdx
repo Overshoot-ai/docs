@@ -191,7 +191,7 @@ export const ModelFiller = ({ placeholder, label, storageKey }) => {
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error('fetch failed'))))
       .then((data) => {
         if (cancelled) return
-        const ready = (data.data || []).filter((m) => m.status === 'ready' || m.status === 'loading')
+        const ready = (data.data || []).filter((m) => m.status === 'ready')
         setModels(ready)
         let saved = ''
         try { saved = window.sessionStorage.getItem(storageKey) || '' } catch (e) {}
@@ -227,7 +227,7 @@ export const ModelFiller = ({ placeholder, label, storageKey }) => {
         {models.length === 0 && <option value={value}>{value}</option>}
         {models.map((m) => (
           <option key={m.id} value={m.id}>
-            {m.id}{m.status === 'loading' ? ' (loading)' : ''}
+            {m.id}{m.status === 'unavailable' ? ' (unavailable)' : ''}
           </option>
         ))}
       </select>

@@ -61,7 +61,7 @@ curl https://api.overshoot.ai/v1beta/streams/{stream_id} \
   ```
 </Accordion>
 
-A `Stream` ends when it expires (5 min idle), gets `DELETE`d, or gets reaped by the system. Once `state` flips to `ended`, it stays ended — there is no resume.
+A `Stream` ends when it expires (5 min idle) or gets `DELETE`d. Once `state` flips to `ended`, it stays ended — there is no resume.
 
 ## How to keep a stream alive
 
@@ -91,7 +91,7 @@ curl -X DELETE https://api.overshoot.ai/v1beta/streams/{stream_id} \
   A `Stream` has exactly two states:
 
   * `active` — created, accepting publishers and inference. The default for any newly-created stream.
-  * `ended` — terminal. Set once on TTL expiry, explicit delete, or system reaping. Never transitions back.
+  * `ended` — terminal. Set once on TTL expiry or explicit delete. Never transitions back.
 
   `GET /streams/{id}` continues to return ended streams for a short tombstone window with `state: "ended"`, `ended_at_ms`, and `end_reason`. After the tombstone window the endpoint returns `404`.
 
@@ -121,7 +121,7 @@ curl -X DELETE https://api.overshoot.ai/v1beta/streams/{stream_id} \
   | `expires_at_ms`               | int     | Wall-clock ms when the lease will expire if not renewed.  |
   | `ttl_seconds`                 | int     | Configured TTL — currently 300 for all streams.           |
   | `ended_at_ms`                 | int?    | Set when `state == "ended"`.                              |
-  | `end_reason`                  | string? | `expired` \| `deleted` \| `reaped`.                       |
+  | `end_reason`                  | string? | `expired` \| `deleted`.                                   |
   | `audio`                       | bool    | Reserved. Always `false`.                                 |
 
   ### Frame indexing semantics

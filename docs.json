@@ -38,6 +38,13 @@
               "api-reference/stream-lifecycle",
               "api-reference/stream-media-urls",
               {
+                "group": "Chat",
+                "icon": "message",
+                "pages": [
+                  "api-reference/chat-completions"
+                ]
+              },
+              {
                 "group": "Streams",
                 "icon": "video",
                 "pages": [
@@ -56,13 +63,6 @@
                   "api-reference/get-pricing",
                   "api-reference/get-balance",
                   "api-reference/create-checkout"
-                ]
-              },
-              {
-                "group": "Chat",
-                "icon": "message",
-                "pages": [
-                  "api-reference/chat-completions"
                 ]
               },
               "api-reference/livekit-client-flow",
