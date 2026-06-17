@@ -12,7 +12,7 @@
   "navigation": {
     "versions": [
       {
-        "version": "v1",
+        "version": "v1beta",
         "default": true,
         "tabs": [
           {
