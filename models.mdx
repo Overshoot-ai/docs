@@ -73,10 +73,10 @@ These are the fast path. We run them on our own GPUs, sized for sub-second time-
 | Model | Provider | Context | Tokens / frame | Max frames |
 | --- | --- | --- | --- | --- |
 | `Qwen/Qwen3.6-27B-FP8` | Qwen | 32K | ~200 @ 480p | Capped by context |
-| `Qwen/Qwen3.6-35B-A3B-FP8` | Qwen | 16K | ~200 @ 480p | Capped by context (16K) |
+| `Qwen/Qwen3.6-35B-A3B-FP8` | Qwen | 16K | ~200 @ 480p | Capped by context |
 | `google/gemma-4-31B-it` | Google | 256K | 70 / 140 / 280 / 560 / 1120 | ~60 (1 fps × 60 s) |
 | `google/gemma-4-26B-A4B-it` | Google | 256K | 70 / 140 / 280 / 560 / 1120 | ~60 (1 fps × 60 s) |
-| `Hcompany/Holo3-35B-A3B` | H Company | 16K | ~200 @ 480p | Capped by context (16K) |
+| `Hcompany/Holo3-35B-A3B` | H Company | 16K | ~200 @ 480p | Capped by context |
 
 ### Proprietary passthrough
 
@@ -100,12 +100,12 @@ These are upstream APIs we expose through the same OpenAI-compatible surface for
 ### How to read the columns
 
 <AccordionGroup>
-  <Accordion title="Context — served vs native" icon="ruler">
-    **Served** is the context length we run the model with.
+  <Accordion title="Context" icon="ruler">
+    The context window length we run the model with. Visual tokens, text input, and text output all share this budget.
   </Accordion>
 
-  <Accordion title="Tokens / frame — Qwen models" icon="image">
-    Qwen3.6 uses the same image processor as the Qwen3 line: patch 16, `temporal_patch_size=2`, `spatial_merge_size=2`. The formula:
+  <Accordion title="Tokens / frame — Qwen and Holo3" icon="image">
+    Qwen3.6 and Holo3 use the same image processor as the Qwen3 line: patch 16, `temporal_patch_size=2`, `spatial_merge_size=2`. The formula:
 
     ```text
     tokens_per_frame ≈ (H × W) / 2048
@@ -126,18 +126,18 @@ These are upstream APIs we expose through the same OpenAI-compatible surface for
     - **70–280** — classification, captioning, video understanding.
     - **560–1120** — OCR, document parsing, small text.
 
-    Default is 256 tokens.
+    Default is `280`.
   </Accordion>
 
   <Accordion title="Max frames" icon="film">
     - **Qwen / Holo3** — no hard model-side cap. Frame count is bounded by context. The practical limit is `(context − text_input − text_output) / tokens_per_frame`.
     - **Gemma 4** — Google documents 60 s at 1 fps as the supported envelope (~60 frames).
   </Accordion>
-
-  <Accordion title="Interleaved text + video" icon="layer-group">
-    The model can mix text segments between visual tokens inside a single message — instead of forcing all visual content into one block followed by text. Every active model supports this.
-  </Accordion>
 </AccordionGroup>
+
+### Interleaved text and video
+
+Every active model can mix text segments between visual tokens inside a single message, instead of forcing all visual content into one block followed by text.
 
 ## Use a model
 
@@ -174,7 +174,7 @@ See [Chat Completion](/chat-completion) for the full request/response shape.
 
   1. `GET /v1/models`. The response is a list. Filter to entries with `status == "ready"`.
   2. **Filter to Overshoot-hosted first.** A model is hosted if its `id` looks like `<owner>/<model>` (e.g. `Qwen/...`, `google/gemma-...`, `Hcompany/...`). Anything else (`gemini-*`, `claude-*`, `gpt-*`) is proprietary passthrough — slower, only use as a deliberate fallback.
-  3. From the hosted set, pick a model `id` whose properties match the workload (see the table above).
+  3. From the hosted set, pick a model `id` whose properties match the workload (see the [Overshoot-hosted](#overshoot-hosted) table).
   4. Use that exact `id` as the `model` field in `/chat/completions`.
 
   ### Status values
