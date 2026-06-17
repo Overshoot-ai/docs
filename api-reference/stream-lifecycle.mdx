@@ -1,0 +1,25 @@
+---
+title: "Stream lifecycle"
+description: "How streams transition between active and ended, and how frame availability is exposed."
+---
+
+Streams are live resources. There is no public pause, resume, or idle state in the current API. A stream is `active` until it ends or expires; frames may be arriving, not arriving yet, or arriving at a weak cadence.
+
+## Frame availability
+
+Frame availability is exposed through [`GET /streams/{id}`](/api-reference/get-stream):
+
+- `first_frame_at_ms` is non-null after the first frame is captured.
+- `recent_fps` is computed over the current frame-metrics bucket for active streams.
+- `retained_frame_count` counts frames still available for inference.
+- `evicted_frame_count` counts frames evicted from the stream history window.
+- `last_frame_index` is the 0-indexed lifetime index of the most recent frame.
+- `first_available_frame_index` is the 0-indexed lifetime index of the oldest frame still retained.
+- `first_available_frame_at_ms` is the epoch ms timestamp of that oldest retained frame.
+- `end_reason` is `null` while active. On ended streams it is `"deleted"` for explicit deletes and `"expired"` for system-driven termination.
+
+## Frame indexing
+
+Frame indices used by inference URLs are **stream-lifetime indices**, not retained-window positions. `frame_index=0` means the first frame ever captured for that stream. Exact image lookups fail if that frame has been evicted; video ranges are intersected with the retained window.
+
+When a stream ends, live counters and timestamps are snapshotted. [`GET /streams/{id}`](/api-reference/get-stream) on an ended stream returns those final values.

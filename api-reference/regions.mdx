@@ -1,0 +1,24 @@
+---
+title: "Region behavior"
+description: "How regional routing works and how to skip the redirect/retry step."
+---
+
+Streams are regional resources. If your application knows which region owns a stream, you can include a region header to avoid an extra redirect/retry step.
+
+Clients may send:
+
+```http
+X-Overshoot-Region: us-west1
+```
+
+or:
+
+```http
+X-Overshoot-Region: us-central1
+```
+
+If a request reaches the wrong region, the API returns `409` with a `region_error` body that identifies the expected or requested region. Responses expose `X-Overshoot-Region` with the serving region.
+
+<Note>
+  One chat-completions request cannot reference streams from multiple regions.
+</Note>

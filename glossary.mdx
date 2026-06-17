@@ -14,7 +14,7 @@ A leased live-video session. A Stream holds the most recent window of frames you
 - Renewed by [`POST /streams/{stream_id}/keepalive`](/api-reference/keepalive-stream).
 - Deleted by [`DELETE /streams/{stream_id}`](/api-reference/delete-stream).
 
-A Stream ends when the lease expires (5 minutes idle), the client deletes it, or the platform reaps it. See [The Stream](/the-stream) for the full lifecycle.
+A Stream ends when the lease expires (5 minutes idle) or the client deletes it. See [The Stream](/the-stream) for the full lifecycle.
 
 ## `stream_id`
 
@@ -63,9 +63,10 @@ The act of renewing a Stream's lease. Call [`POST /streams/{stream_id}/keepalive
 
 The string you pass as the `model` field on `/chat/completions`. Format is `provider/model-name`:
 
-- `Qwen/Qwen3.5-9B`
-- `Qwen/Qwen3-VL-30B-A3B-Instruct`
-- `google/gemma-4-E4B-it`
+- `Qwen/Qwen3.6-27B-FP8`
+- `Qwen/Qwen3.6-35B-A3B-FP8`
+- `google/gemma-4-26B-A4B-it`
+- `google/gemma-4-31B-it`
 - `Hcompany/Holo3-35B-A3B`
 
 List currently-ready model ids with [`GET /models`](/api-reference/list-models) or browse the [Models page](/models).

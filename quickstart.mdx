@@ -187,11 +187,11 @@ export const ModelFiller = ({ placeholder, label, storageKey }) => {
 
   useEffect(() => {
     let cancelled = false
-    fetch('https://api.overshoot.ai/v1/models')
+    fetch('https://api.overshoot.ai/v1beta/models')
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error('fetch failed'))))
       .then((data) => {
         if (cancelled) return
-        const ready = (data.data || []).filter((m) => m.status === 'ready' || m.status === 'loading')
+        const ready = (data.data || []).filter((m) => m.status === 'ready')
         setModels(ready)
         let saved = ''
         try { saved = window.sessionStorage.getItem(storageKey) || '' } catch (e) {}
@@ -227,7 +227,7 @@ export const ModelFiller = ({ placeholder, label, storageKey }) => {
         {models.length === 0 && <option value={value}>{value}</option>}
         {models.map((m) => (
           <option key={m.id} value={m.id}>
-            {m.id}{m.status === 'loading' ? ' (loading)' : ''}
+            {m.id}{m.status === 'unavailable' ? ' (unavailable)' : ''}
           </option>
         ))}
       </select>
@@ -248,12 +248,12 @@ export const ModelFiller = ({ placeholder, label, storageKey }) => {
         placeholder="$OVERSHOOT_API_KEY"
         label="Paste your API key — auto-fills the snippets below"
         storageKey="overshoot_api_key"
-        inputPlaceholder="sk_live_..."
+        inputPlaceholder="ovs-..."
       />
     </FillerCard>
 
     ```shellscript
-    curl -X POST https://api.overshoot.ai/v1/streams \
+    curl -X POST https://api.overshoot.ai/v1beta/streams \
     -H "Authorization: Bearer $OVERSHOOT_API_KEY"
     ```
 
@@ -285,7 +285,7 @@ export const ModelFiller = ({ placeholder, label, storageKey }) => {
 
     <FillerCard>
       <ModelFiller
-        placeholder="google/gemma-4-E4B-it"
+        placeholder="google/gemma-4-26B-A4B-it"
         label="Model — pulled live from the API"
         storageKey="overshoot_model"
       />
@@ -298,11 +298,11 @@ export const ModelFiller = ({ placeholder, label, storageKey }) => {
     </FillerCard>
 
     ```shellscript highlight={12} wrap
-    curl -X POST https://api.overshoot.ai/v1/chat/completions \
+    curl -X POST https://api.overshoot.ai/v1beta/chat/completions \
     -H "Authorization: Bearer $OVERSHOOT_API_KEY" \
     -H "Content-Type: application/json" \
     -d '{
-    "model": "google/gemma-4-E4B-it",
+    "model": "google/gemma-4-26B-A4B-it",
     "messages": [
         {
         "role": "user",
@@ -321,7 +321,7 @@ export const ModelFiller = ({ placeholder, label, storageKey }) => {
           "id": "34225b75-abae-4c58-8191-2abdc8f437de",
           "object": "chat.completion",
           "created": 1777530304,
-          "model": "google/gemma-4-E4B-it",
+          "model": "google/gemma-4-26B-A4B-it",
           "choices": [
               {
                   "index": 0,

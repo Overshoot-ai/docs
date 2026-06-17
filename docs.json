@@ -33,6 +33,17 @@
             "icon": "code",
             "pages": [
               "api-reference/introduction",
+              "api-reference/authentication",
+              "api-reference/core-flow",
+              "api-reference/stream-lifecycle",
+              "api-reference/stream-media-urls",
+              {
+                "group": "Chat",
+                "icon": "message",
+                "pages": [
+                  "api-reference/chat-completions"
+                ]
+              },
               {
                 "group": "Streams",
                 "icon": "video",
@@ -44,19 +55,21 @@
                 ]
               },
               {
-                "group": "Models",
+                "group": "Models & pricing",
                 "icon": "microchip-ai",
                 "pages": [
-                  "api-reference/list-models"
+                  "api-reference/list-models",
+                  "api-reference/list-pricing",
+                  "api-reference/get-pricing",
+                  "api-reference/get-balance",
+                  "api-reference/create-checkout"
                 ]
               },
-              {
-                "group": "Chat",
-                "icon": "message",
-                "pages": [
-                  "api-reference/chat-completions"
-                ]
-              }
+              "api-reference/livekit-client-flow",
+              "api-reference/regions",
+              "api-reference/prompt-cache",
+              "api-reference/errors",
+              "api-reference/limits"
             ]
           }
         ]

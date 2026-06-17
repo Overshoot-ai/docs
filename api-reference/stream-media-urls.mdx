@@ -1,0 +1,60 @@
+---
+title: "Stream media URLs"
+description: "The ovs:// URL grammar for referencing frames and segments inside chat completions."
+---
+
+Overshoot media URLs have this shape:
+
+```text
+ovs://streams/<stream_id>?<query>
+```
+
+These URLs are **reference identifiers** inside chat-completions requests. Overshoot resolves them to the requested stream media before calling the selected model. They are not fetchable HTTP URLs.
+
+Only `ovs://streams/...` URLs use this resolution behavior. Non-Overshoot `image_url` and `video_url` values are sent as provided to the selected model.
+
+<Warning>
+  Do not use public HTTP media URLs for inference. Use `ovs://streams/<id>?...` inside the chat-completions request.
+</Warning>
+
+## Image URL queries
+
+Use `image_url` when the request should resolve to one frame.
+
+| Param          | Type                                 | Notes                                                                                   |
+| -------------- | ------------------------------------ | --------------------------------------------------------------------------------------- |
+| `timestamp_ms` | int                                  | Stream-relative timestamp.                                                              |
+| `offset_ms`    | int                                  | Negative offset anchors to latest frame; non-negative anchors to oldest retained frame. |
+| `frame_index`  | int                                  | Lifetime frame index. Negative values count from latest retained frame; `-1` is latest. |
+| `tolerance_ms` | int                                  | Default `100`; only meaningful with `timestamp_ms` or `offset_ms`.                      |
+| `direction`    | `nearest` \| `forward` \| `backward` | Default `nearest`; only meaningful with timestamp/offset lookup.                        |
+
+Exactly one of `timestamp_ms`, `offset_ms`, or `frame_index` is required.
+
+```text
+ovs://streams/<id>?frame_index=-1
+ovs://streams/<id>?timestamp_ms=12000&tolerance_ms=250
+ovs://streams/<id>?offset_ms=-5000&direction=backward
+```
+
+## Video URL queries
+
+Use `video_url` when the request should resolve to multiple frames and be sent to the selected model as a generated clip.
+
+| Param                | Type  | Notes                                                             |
+| -------------------- | ----- | ----------------------------------------------------------------- |
+| `start_frame_index`  | int   | One `start_*` param is required.                                  |
+| `end_frame_index`    | int   | Optional; end is exclusive.                                       |
+| `start_timestamp_ms` | int   | One `start_*` param is required.                                  |
+| `end_timestamp_ms`   | int   | Optional; end is exclusive.                                       |
+| `start_offset_ms`    | int   | One `start_*` param is required.                                  |
+| `end_offset_ms`      | int   | Optional; end is exclusive.                                       |
+| `max_fps`            | float | Default `1.0`; max frames retained per second after downsampling. |
+
+```text
+ovs://streams/<id>?start_frame_index=-30&max_fps=2
+ovs://streams/<id>?start_timestamp_ms=10000&end_timestamp_ms=15000&max_fps=4
+ovs://streams/<id>?start_offset_ms=-10000&end_offset_ms=0
+```
+
+Resolution is intersected with the retained frame window. If the requested range has no available frames, the request fails with `segment_empty`.

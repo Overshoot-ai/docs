@@ -12,20 +12,20 @@ Availability changes as endpoints come online and go offline. Always query `/mod
 <CodeGroup>
 
 ```shellscript curl
-curl https://api.overshoot.ai/v1/models
+curl https://api.overshoot.ai/v1beta/models
 ```
 
 ```python python
 import httpx
 
-r = httpx.get("https://api.overshoot.ai/v1/models")
+r = httpx.get("https://api.overshoot.ai/v1beta/models")
 ready = [m for m in r.json()["data"] if m["status"] == "ready"]
 for m in ready:
     print(m["id"])
 ```
 
 ```typescript typescript
-const res = await fetch("https://api.overshoot.ai/v1/models");
+const res = await fetch("https://api.overshoot.ai/v1beta/models");
 const { data } = await res.json();
 const ready = data.filter((m) => m.status === "ready");
 ```
@@ -61,7 +61,7 @@ The response is OpenAI-compatible — same shape `listModels` returns, with one 
 ## Active models
 
 <Info>
-  Snapshot as of **2026-05-01**. The `/models` endpoint is the source of truth — treat these tables as a quick reference, not a guarantee.
+  Snapshot as of **2026-06-16**. The `/models` endpoint is the source of truth — treat these tables as a quick reference, not a guarantee.
 </Info>
 
 Models on Overshoot fall into two groups: **Overshoot-hosted** (open-weights models we run on our own GPU fleet, tuned for real-time inference) and **proprietary passthrough** (Gemini / Claude / OpenAI, which we proxy to the upstream provider). Default to the hosted models — that's where Overshoot's latency advantage lives.
@@ -144,7 +144,7 @@ These are upstream APIs we expose through the same OpenAI-compatible surface for
 Pass the `id` from `/models` straight into `/chat/completions`:
 
 ```shellscript wrap
-curl -X POST https://api.overshoot.ai/v1/chat/completions \
+curl -X POST https://api.overshoot.ai/v1beta/chat/completions \
   -H "Authorization: Bearer $OVERSHOOT_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -172,18 +172,17 @@ See [Chat Completion](/chat-completion) for the full request/response shape.
 
   ### Selection algorithm
 
-  1. `GET /v1/models`. The response is a list. Filter to entries with `status == "ready"`.
+  1. `GET /v1beta/models`. The response is a list. Filter to entries with `status == "ready"`.
   2. **Filter to Overshoot-hosted first.** A model is hosted if its `id` looks like `<owner>/<model>` (e.g. `Qwen/...`, `google/gemma-...`, `Hcompany/...`). Anything else (`gemini-*`, `claude-*`, `gpt-*`) is proprietary passthrough — slower, only use as a deliberate fallback.
   3. From the hosted set, pick a model `id` whose properties match the workload (see the table above).
   4. Use that exact `id` as the `model` field in `/chat/completions`.
 
   ### Status values
 
-  | Status    | Meaning                                  | What to do                                        |
-  | --------- | ---------------------------------------- | ------------------------------------------------- |
-  | `ready`   | At least one healthy replica is serving. | Use it.                                           |
-  | `loading` | Replicas are coming up.                  | May become ready in seconds — don't depend on it. |
-  | (omitted) | Not currently serving.                   | Don't use; not in the response.                   |
+  | Status        | Meaning                                  | What to do                                                |
+  | ------------- | ---------------------------------------- | --------------------------------------------------------- |
+  | `ready`       | At least one healthy replica is serving. | Use it.                                                   |
+  | `unavailable` | Currently not serving.                   | Don't use — retry later or fall through to another model. |
 
   A model that's `ready` at list-time can return `503` at completion-time if the only replica fell over between calls. Always handle `503` with either a retry or a fallback to another `ready` model.
 
@@ -212,7 +211,7 @@ See [Chat Completion](/chat-completion) for the full request/response shape.
   ```python
   import httpx
 
-  resp = httpx.get("https://api.overshoot.ai/v1/models", timeout=5)
+  resp = httpx.get("https://api.overshoot.ai/v1beta/models", timeout=5)
   resp.raise_for_status()
   ready = [m["id"] for m in resp.json()["data"] if m["status"] == "ready"]
   hosted = [m for m in ready if "/" in m]              # fast path — prefer these
@@ -220,7 +219,7 @@ See [Chat Completion](/chat-completion) for the full request/response shape.
   ```
 
   ```typescript
-  const res = await fetch("https://api.overshoot.ai/v1/models");
+  const res = await fetch("https://api.overshoot.ai/v1beta/models");
   if (!res.ok) throw new Error(`models: ${res.status}`);
   const { data } = (await res.json()) as { data: Array<{ id: string; status: string }> };
   const ready = data.filter((m) => m.status === "ready").map((m) => m.id);

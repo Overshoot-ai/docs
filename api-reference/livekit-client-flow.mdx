@@ -1,0 +1,41 @@
+---
+title: "LiveKit client flow"
+description: "Browser example showing how to create a stream, publish via LiveKit, and renew the lease."
+---
+
+```js
+import { Room, createLocalTracks } from "livekit-client";
+
+const API = "https://api.overshoot.ai/v1beta";
+
+async function createStream(apiKey) {
+  const res = await fetch(`${API}/streams`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+    },
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+const { id, publish } = await createStream(apiKey);
+
+const room = new Room({ adaptiveStream: true, dynacast: true });
+await room.connect(publish.url, publish.token);
+
+const [videoTrack] = await createLocalTracks({ video: true, audio: false });
+await room.localParticipant.publishTrack(videoTrack);
+
+setInterval(async () => {
+  const res = await fetch(`${API}/streams/${id}/keepalive`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+  if (!res.ok) return;
+  const ka = await res.json();
+  await room.updateToken(ka.publish.token);
+}, 240_000);
+```
+
+Any LiveKit publisher works (browser, native, server-to-server). See the [LiveKit SDK reference](https://docs.livekit.io/reference/) for non-browser clients.
