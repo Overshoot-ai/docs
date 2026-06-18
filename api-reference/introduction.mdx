@@ -8,9 +8,9 @@ The Overshoot REST API turns a live video feed into a conversation. Publish fram
 ## Endpoints
 
 - [List models](/api-reference/list-models) — discover the vision-language models you can target in chat completions.
-- [Create stream](/api-reference/create-stream) — open a live stream and get a LiveKit room URL + token to start publishing frames.
+- [Create stream](/api-reference/create-stream) — open a live stream and get a LiveKit room URL \+ token to start publishing frames.
 - [Get stream](/api-reference/get-stream) — inspect the state of a stream: frame counts, recent FPS, lease expiry.
-- [Renew stream lease](/api-reference/keepalive-stream) — keep a stream alive past the default 5-minute idle window.
+- [Keepalive](/api-reference/keepalive-stream) — keep a stream alive past the default 5-minute idle window.
 - [Delete stream](/api-reference/delete-stream) — end a stream and release its resources.
 - [Chat completions](/api-reference/chat-completions) — ask any vision-language model about a stream's frames.
 

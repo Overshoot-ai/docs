@@ -1,11 +1,7 @@
 ---
-title: Delete stream
+title: "Delete stream"
 description: "End a stream and release its resources. Idempotent on already-deleted streams within the lookup window."
-openapi: 'DELETE /streams/{stream_id}'
+openapi: "api-reference/openapi.yaml DELETE /streams/{stream_id}"
 ---
 
-Tears down a [Stream](/the-stream), drops its retained frames, and releases
-its LiveKit room. Call this as soon as you're done with a session — don't
-rely on the lease timeout if you can help it. After deletion, the
-`stream_id` can no longer be referenced from
-[`/chat/completions`](/api-reference/chat-completions).
+Tears down a [Stream](/the-stream), drops its retained frames, and releases its LiveKit room. Call this as soon as you're done with a session — don't rely on the lease timeout if you can help it. After deletion, the `stream_id` can no longer be referenced from [`/chat/completions`](/api-reference/chat-completions).
