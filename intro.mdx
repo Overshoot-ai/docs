@@ -94,10 +94,14 @@ Enjoy!
 
   | Method   | Path                             | Auth | Purpose                                      |
   | -------- | -------------------------------- | ---- | -------------------------------------------- |
-  | `GET`    | `/v1/models`                 | No   | List available vision-language models.       |
-  | `POST`   | `/v1/streams`                | Yes  | Create a stream, get a LiveKit room + token. |
-  | `GET`    | `/v1/streams/{id}`           | Yes  | Inspect stream state.                        |
-  | `POST`   | `/v1/streams/{id}/keepalive` | Yes  | Renew lease, get a fresh token.              |
-  | `DELETE` | `/v1/streams/{id}`           | Yes  | End the stream.                              |
-  | `POST`   | `/v1/chat/completions`       | Yes  | OpenAI-compatible chat completions.          |
+  | `POST`   | `/v1beta/chat/completions`       | Yes  | OpenAI-compatible chat completions.          |
+  | `POST`   | `/v1beta/streams`                | Yes  | Create a stream, get a LiveKit room + token. |
+  | `GET`    | `/v1beta/streams/{id}`           | Yes  | Inspect stream state.                        |
+  | `POST`   | `/v1beta/streams/{id}/keepalive` | Yes  | Renew lease, get a fresh token.              |
+  | `DELETE` | `/v1beta/streams/{id}`           | Yes  | End the stream.                              |
+  | `GET`    | `/v1beta/models`                 | No   | List available vision-language models.       |
+  | `GET`    | `/billing/pricing`               | No   | List public model prices.                    |
+  | `GET`    | `/billing/pricing/{model}`       | No   | Pricing for one model.                       |
+  | `GET`    | `/billing/accounts/me/balance`   | Yes  | Get prepaid balance.                         |
+  | `POST`   | `/billing/checkout`              | Yes  | Buy prepaid credits.                         |
 </Visibility>

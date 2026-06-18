@@ -3,20 +3,261 @@ title: "Quickstart"
 description: "Get started in four quick steps"
 ---
 
+import { useState, useEffect } from 'react'
+
+export const applyAllFillers = () => {
+  if (typeof window === 'undefined') return
+  const fillers = window.__ovsFillers || {}
+  document.querySelectorAll('pre code').forEach((codeEl) => {
+    if (!codeEl.dataset.ovsOriginal) {
+      codeEl.dataset.ovsOriginal = codeEl.innerHTML
+    } else {
+      codeEl.innerHTML = codeEl.dataset.ovsOriginal
+    }
+    Object.entries(fillers).forEach(([placeholder, value]) => {
+      if (!value || value === placeholder) return
+      const walker = document.createTreeWalker(codeEl, NodeFilter.SHOW_TEXT)
+      const nodes = []
+      while (walker.nextNode()) nodes.push(walker.currentNode)
+      let searchFrom = 0
+      while (true) {
+        let full = ''
+        const map = []
+        for (const node of nodes) {
+          const v = node.nodeValue
+          for (let i = 0; i < v.length; i++) map.push({ node, offset: i })
+          full += v
+        }
+        const idx = full.indexOf(placeholder, searchFrom)
+        if (idx < 0) break
+        const endIdx = idx + placeholder.length
+        const s = map[idx]
+        const e = map[endIdx - 1]
+        if (s.node === e.node) {
+          const v = s.node.nodeValue
+          s.node.nodeValue = v.slice(0, s.offset) + value + v.slice(e.offset + 1)
+        } else {
+          s.node.nodeValue = s.node.nodeValue.slice(0, s.offset) + value
+          let between = false
+          for (const n of nodes) {
+            if (n === s.node) { between = true; continue }
+            if (n === e.node) break
+            if (between) n.nodeValue = ''
+          }
+          e.node.nodeValue = e.node.nodeValue.slice(e.offset + 1)
+        }
+        searchFrom = idx + value.length
+      }
+    })
+  })
+}
+
+export const FillerCard = ({ children }) => (
+  <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 p-3 my-3 not-prose space-y-3">
+    {children}
+  </div>
+)
+
+export const FillerLabel = ({ children, hint }) => (
+  <label className="block text-xs font-medium mb-1.5 text-zinc-600 dark:text-zinc-400">
+    {children}{hint ? <span className="opacity-60"> {hint}</span> : null}
+  </label>
+)
+
+export const fieldClass =
+  'w-full px-3 py-1.5 text-sm font-mono rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 outline-none focus:border-zinc-500'
+
+export const TextFiller = ({ placeholder, label, storageKey, inputPlaceholder }) => {
+  const [value, setValue] = useState('')
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.__ovsFillers = window.__ovsFillers || {}
+    try {
+      const saved = window.sessionStorage.getItem(storageKey) || ''
+      if (saved) setValue(saved)
+    } catch (e) {}
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.__ovsFillers = window.__ovsFillers || {}
+    window.__ovsFillers[placeholder] = value
+    try { window.sessionStorage.setItem(storageKey, value) } catch (e) {}
+    applyAllFillers()
+    const t = setTimeout(applyAllFillers, 50)
+    return () => clearTimeout(t)
+  }, [value])
+
+  return (
+    <div>
+      <FillerLabel>{label}</FillerLabel>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder={inputPlaceholder}
+        spellCheck={false}
+        autoComplete="off"
+        className={fieldClass}
+      />
+    </div>
+  )
+}
+
+export const LiveKitConnector = () => {
+  const [url, setUrl] = useState('')
+  const [token, setToken] = useState('')
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      setUrl(window.sessionStorage.getItem('overshoot_livekit_url') || '')
+      setToken(window.sessionStorage.getItem('overshoot_livekit_token') || '')
+    } catch (e) {}
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try { window.sessionStorage.setItem('overshoot_livekit_url', url) } catch (e) {}
+  }, [url])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try { window.sessionStorage.setItem('overshoot_livekit_token', token) } catch (e) {}
+  }, [token])
+
+  const ready = url.trim() && token.trim()
+  const meetUrl = ready
+    ? `https://meet.livekit.io/custom?liveKitUrl=${encodeURIComponent(url.trim())}&token=${encodeURIComponent(token.trim())}`
+    : null
+
+  return (
+    <FillerCard>
+      <div>
+        <FillerLabel>Room URL — from the response above</FillerLabel>
+        <input
+          type="text"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="wss://livekit.overshoot.ai"
+          spellCheck={false}
+          autoComplete="off"
+          className={fieldClass}
+        />
+      </div>
+      <div>
+        <FillerLabel>Token — from the response above</FillerLabel>
+        <input
+          type="text"
+          value={token}
+          onChange={(e) => setToken(e.target.value)}
+          placeholder="ey..."
+          spellCheck={false}
+          autoComplete="off"
+          className={fieldClass}
+        />
+      </div>
+      {ready ? (
+        <a
+          href={meetUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center justify-center w-full px-3 py-2 text-sm font-medium rounded-md bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:opacity-90 no-underline"
+        >
+          Open in LiveKit Meet →
+        </a>
+      ) : (
+        <div className="w-full px-3 py-2 text-sm font-medium rounded-md bg-zinc-200 dark:bg-zinc-800 text-zinc-500 text-center">
+          Paste both fields to open LiveKit Meet
+        </div>
+      )}
+    </FillerCard>
+  )
+}
+
+export const ModelFiller = ({ placeholder, label, storageKey }) => {
+  const [models, setModels] = useState([])
+  const [value, setValue] = useState(() => {
+    if (typeof window === 'undefined') return placeholder
+    try { return window.sessionStorage.getItem(storageKey) || placeholder } catch (e) { return placeholder }
+  })
+  const [loading, setLoading] = useState(true)
+  const [errored, setErrored] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('https://api.overshoot.ai/v1beta/models')
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error('fetch failed'))))
+      .then((data) => {
+        if (cancelled) return
+        const ready = (data.data || []).filter((m) => m.status === 'ready')
+        setModels(ready)
+        let saved = ''
+        try { saved = window.sessionStorage.getItem(storageKey) || '' } catch (e) {}
+        const validSaved = ready.some((m) => m.id === saved) ? saved : ''
+        const fallback = (ready[0] && ready[0].id) || placeholder
+        setValue(validSaved || fallback)
+        setLoading(false)
+      })
+      .catch(() => { if (!cancelled) { setErrored(true); setLoading(false) } })
+    return () => { cancelled = true }
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !value) return
+    window.__ovsFillers = window.__ovsFillers || {}
+    window.__ovsFillers[placeholder] = value
+    try { window.sessionStorage.setItem(storageKey, value) } catch (e) {}
+    applyAllFillers()
+    const t = setTimeout(applyAllFillers, 50)
+    return () => clearTimeout(t)
+  }, [value])
+
+  const hint = loading ? '(loading latest…)' : errored ? "(couldn't reach API — using default)" : null
+
+  return (
+    <div>
+      <FillerLabel hint={hint}>{label}</FillerLabel>
+      <select
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        className={fieldClass}
+      >
+        {models.length === 0 && <option value={value}>{value}</option>}
+        {models.map((m) => (
+          <option key={m.id} value={m.id}>
+            {m.id}{m.status === 'unavailable' ? ' (unavailable)' : ''}
+          </option>
+        ))}
+      </select>
+    </div>
+  )
+}
+
 <Steps>
   <Step title="Authenticate">
     <Card title="Get your API Key" icon="key" horizontal href="https://platform.overshoot.ai/api-keys">
     </Card>
   </Step>
   <Step title="Create a stream">
-    We call the `/streams` endpoint to create a [Stream](/the-stream). 
+    We call the `/streams` endpoint to create a [Stream](/the-stream). 
+
+    <FillerCard>
+      <TextFiller
+        placeholder="$OVERSHOOT_API_KEY"
+        label="Paste your API key — auto-fills the snippets below"
+        storageKey="overshoot_api_key"
+        inputPlaceholder="ovs-..."
+      />
+    </FillerCard>
 
     ```shellscript
-    curl -X POST https://api.overshoot.ai/v1/streams \
+    curl -X POST https://api.overshoot.ai/v1beta/streams \
     -H "Authorization: Bearer $OVERSHOOT_API_KEY"
     ```
 
-    The command above returns a Room URL and a Token. Save those for the next step. 
+    The command above returns a Room URL and a Token. Save those for the next step. 
 
     <Accordion title="Sample Response">
       ```json focus={2,6-7}
@@ -35,17 +276,33 @@ description: "Get started in four quick steps"
     </Accordion>
   </Step>
   <Step title="Connect your webcam to the stream">
-    Use your Room URL and Token to connect your camera using [LiveKit Meet](https://meet.livekit.io/?tab=custom). You can also use your favorite [LiveKit SDK](https://docs.livekit.io/transport/sdk-platforms/) for this.
+    Paste your Room URL and Token to generate a one-click [LiveKit Meet](https://meet.livekit.io/?tab=custom) link, or use your favorite [LiveKit SDK](https://docs.livekit.io/transport/sdk-platforms/).
+
+    <LiveKitConnector />
   </Step>
   <Step title="Ask the model what it can see">
-    Once the camera is connected, send a simple [Chat Completion](/chat-completion) request to the model. 
+    Once the camera is connected, send a simple [Chat Completion](/chat-completion) request to the model.
+
+    <FillerCard>
+      <ModelFiller
+        placeholder="google/gemma-4-26B-A4B-it"
+        label="Model — pulled live from the API"
+        storageKey="overshoot_model"
+      />
+      <TextFiller
+        placeholder="{stream_id}"
+        label="Stream ID — from the response above"
+        storageKey="overshoot_stream_id"
+        inputPlaceholder="2ea5a604-d225-4cd2-82ac-b907cb0b4f63"
+      />
+    </FillerCard>
 
     ```shellscript highlight={12} wrap
-    curl -X POST https://api.overshoot.ai/v1/chat/completions \
+    curl -X POST https://api.overshoot.ai/v1beta/chat/completions \
     -H "Authorization: Bearer $OVERSHOOT_API_KEY" \
     -H "Content-Type: application/json" \
     -d '{
-    "model": "google/gemma-4-E4B-it",
+    "model": "google/gemma-4-26B-A4B-it",
     "messages": [
         {
         "role": "user",
@@ -64,7 +321,7 @@ description: "Get started in four quick steps"
           "id": "34225b75-abae-4c58-8191-2abdc8f437de",
           "object": "chat.completion",
           "created": 1777530304,
-          "model": "google/gemma-4-E4B-it",
+          "model": "google/gemma-4-26B-A4B-it",
           "choices": [
               {
                   "index": 0,

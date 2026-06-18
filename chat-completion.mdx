@@ -17,7 +17,7 @@ A Chat Completion Request contains primarily two attributes:
 <Accordion title="Example of Chat Completion request">
   ```json request.json
   {
-    "model": "google/gemma-4-E4B-it",
+    "model": "google/gemma-4-26B-A4B-it",
     "messages": [
       {
         "role": "system",
@@ -68,12 +68,12 @@ Almost all inference providers today provide Chat Completion inference endpoints
   from openai import OpenAI
 
   client = OpenAI(
-      base_url="https://api.overshoot.ai/v1",
+      base_url="https://api.overshoot.ai/v1beta",
       api_key=os.environ["OVERSHOOT_API_KEY"],
   )
 
   response = client.chat.completions.create(
-      model="google/gemma-4-E4B-it",
+      model="google/gemma-4-26B-A4B-it",
       messages=[
           {"role": "system", "content": "You are a helpful assistant"},
           {"role": "user", "content": "what is the capital of france?"},

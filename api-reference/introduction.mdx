@@ -17,15 +17,17 @@ The Overshoot REST API turns a live video feed into a conversation. Publish fram
 ## Base URL
 
 ```text
-https://api.overshoot.ai/v1
+https://api.overshoot.ai/v1beta
 ```
+
+Billing endpoints are mounted on the same host under `/billing`.
 
 ## Authentication
 
 Bearer tokens. Include your API key on every authenticated request:
 
 ```bash
-curl https://api.overshoot.ai/v1/streams/<id> \
+curl https://api.overshoot.ai/v1beta/streams/<id> \
   -H "Authorization: Bearer ovs-..."
 ```
 

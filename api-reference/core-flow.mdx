@@ -1,0 +1,25 @@
+---
+title: "Core flow"
+description: "The end-to-end lifecycle: create a stream, publish frames, query frames with chat completions."
+---
+
+```text
+client -> POST /streams -> Overshoot
+client <- {id, publish:{url,token}} <- Overshoot
+
+client -> publish media using publish.url + publish.token
+
+client -> POST /chat/completions -> Overshoot
+         messages include image_url/video_url references to ovs://streams/<id>?...
+```
+
+## Lifecycle
+
+1. [`POST /streams`](/api-reference/create-stream) creates a stream and returns a publish token.
+2. The client publishes video using `publish.url` and `publish.token` (see [LiveKit client flow](/api-reference/livekit-client-flow)).
+3. Overshoot makes recent frames available for inference.
+4. The client calls [`POST /chat/completions`](/api-reference/chat-completions) with text and optional `ovs://` media references.
+5. The client calls [`POST /streams/{id}/keepalive`](/api-reference/keepalive-stream) before the 5-minute lease expires.
+6. [`DELETE /streams/{id}`](/api-reference/delete-stream) ends the stream.
+
+There is no public `POST /streams/{id}/infer` contract.
