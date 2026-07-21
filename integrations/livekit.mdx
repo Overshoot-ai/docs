@@ -1,0 +1,56 @@
+---
+title: "LiveKit"
+description: "Build a real-time vision agent that watches a LiveKit room and streams structured JSON observations."
+---
+
+Overshoot already speaks LiveKit: every Stream is a LiveKit room minted by `POST /streams`. This integration goes the other direction: an agent that joins *your* LiveKit room, watches whatever video is published there, and posts structured JSON observations back to the room's participants.
+
+Use it for live camera monitoring, screen-understanding copilots, RTSP/CCTV analysis, or any app where participants need a model's read on live video.
+
+## Template
+
+The fastest path is the community template, a [LiveKit Agents](https://docs.livekit.io/agents/) worker in Python:
+
+```bash
+lk app create --template-url https://github.com/Overshoot-ai/livekit-vision-agent my-vision-agent
+```
+
+Or clone [Overshoot-ai/livekit-vision-agent](https://github.com/Overshoot-ai/livekit-vision-agent) directly. You need a [LiveKit Cloud](https://cloud.livekit.io) project (or self-hosted LiveKit) and an [Overshoot API key](https://platform.overshoot.ai).
+
+The template ships with three video sources (webcam, screen share, and an RTSP bridge for IP cameras) plus a demo frontend that publishes video and renders the live JSON output.
+
+## How it works
+
+1. The agent joins the room and subscribes to the first video track.
+2. At `VISION_FPS` (default 2), it sends the latest frame to `/chat/completions` with your `VISION_PROMPT` and a JSON schema.
+3. Each response is published to the room as a [text stream](https://docs.livekit.io/home/client/data/text-streams/) on the `vision` topic, with the request latency attached.
+
+Any LiveKit client consumes the output with one handler:
+
+```js
+room.registerTextStreamHandler('vision', async (reader) => {
+  const observation = JSON.parse(await reader.readAll());
+});
+```
+
+## Ingest modes
+
+The template supports two ways of getting pixels to the model, set by `OVERSHOOT_INGEST_MODE`:
+
+- `frames` (default): each request carries the latest frame as an inline JPEG. No extra moving parts.
+- `stream`: the agent republishes the room's video into an Overshoot Stream over WebRTC and references it as `ovs://streams/{stream_id}?frame_index=-1`. Requests carry no pixels; the model reads the latest ingested frame server-side. See [Stream media URLs](/api-reference/stream-media-urls).
+
+`stream` mode is the same pathway described in [LiveKit client flow](/api-reference/livekit-client-flow): the template's bridge calls `POST /streams`, publishes frames to the returned LiveKit room, and renews the lease with `/keepalive`.
+
+## Structured output
+
+Define the output shape with a JSON schema in `VISION_SCHEMA`. The agent requests `json_object` mode with the schema in the prompt, which is the fast path for `google/gemma-4-26B-A4B-it` on vision input. The default schema:
+
+```json
+{
+  "summary": "A person is standing at a desk holding a coffee mug",
+  "objects": ["person", "desk", "laptop", "coffee mug"],
+  "activity": "working at a standing desk",
+  "alert": null
+}
+```

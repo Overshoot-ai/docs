@@ -25,7 +25,14 @@
               "chat-completion",
               "models",
               "glossary",
-              "best-practices"
+              "best-practices",
+              {
+                "group": "Integrations",
+                "icon": "plug",
+                "pages": [
+                  "integrations/livekit"
+                ]
+              }
             ]
           },
           {
