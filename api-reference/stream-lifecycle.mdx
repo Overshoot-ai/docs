@@ -1,6 +1,6 @@
 ---
 title: "Stream lifecycle"
-description: "How streams transition between active and ended, and how frame availability is exposed."
+description: "See how a Stream moves from active to ended, how frame availability is exposed, and how lifetime frame_index values are assigned."
 ---
 
 Streams are live resources. There is no public pause, resume, or idle state in the current API. A stream is `active` until it ends or expires; frames may be arriving, not arriving yet, or arriving at a weak cadence.

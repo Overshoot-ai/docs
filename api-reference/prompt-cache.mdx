@@ -1,6 +1,6 @@
 ---
 title: "Prompt cache and threads"
-description: "Reuse cached prompt prefixes across related chat completion requests."
+description: "Reuse a thread_id across related chat completions to improve prompt-cache reuse, and read hit stats under the overshoot.cache field."
 ---
 
 Use the same `thread_id` for related requests in the same user conversation and model to improve prompt-cache reuse when available.

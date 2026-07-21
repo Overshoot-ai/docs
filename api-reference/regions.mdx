@@ -1,6 +1,6 @@
 ---
 title: "Region behavior"
-description: "How regional routing works and how to skip the redirect/retry step."
+description: "Send the X-Overshoot-Region header to route a request to a Stream's owning region and skip the extra 409 redirect and retry step."
 ---
 
 Streams are regional resources. If your application knows which region owns a stream, you can include a region header to avoid an extra redirect/retry step.
