@@ -58,6 +58,7 @@
                   "api-reference/create-stream",
                   "api-reference/get-stream",
                   "api-reference/keepalive-stream",
+                  "api-reference/viewer-token",
                   "api-reference/delete-stream"
                 ]
               },

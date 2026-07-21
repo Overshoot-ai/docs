@@ -169,6 +169,42 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/RegionError" }
 
+  /streams/{stream_id}/viewer-token:
+    parameters:
+      - $ref: "#/components/parameters/StreamId"
+      - $ref: "#/components/parameters/RegionHeader"
+    post:
+      tags: [Streams]
+      operationId: createViewerToken
+      summary: Create viewer token
+      description: |
+        Issues a short-lived, subscribe-only LiveKit token so the stream owner can watch
+        the video the model is ingesting. The token cannot publish media or data-channel
+        messages. Connect with any LiveKit client SDK and render the remote video track.
+      responses:
+        "200":
+          description: Viewer token issued.
+          headers:
+            X-Overshoot-Region: { $ref: "#/components/headers/RegionResponseHeader" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ViewerTokenResponse" }
+        "401":
+          description: Missing or invalid API key.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404":
+          description: Stream unknown, expired, deleted, or owned by a different user.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "409":
+          description: Wrong region.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RegionError" }
+
   /models:
     get:
       tags: [Models]
@@ -580,6 +616,23 @@ components:
         url: { type: string, description: "LiveKit room URL (`wss://...`)." }
         token: { type: string, description: Short-lived publish JWT for the LiveKit client. }
       required: [type, url, token]
+
+    ViewInfo:
+      type: object
+      description: WebRTC view target. Connect with the LiveKit client SDK and subscribe to the remote video track.
+      properties:
+        type: { type: string, enum: [livekit], default: livekit }
+        url: { type: string, description: "LiveKit room URL (`wss://...`)." }
+        token: { type: string, description: Short-lived subscribe-only JWT. Cannot publish media or data-channel messages. }
+        expires_in_seconds: { type: integer, example: 300, description: "Seconds until the token expires. Request a new one when it does." }
+      required: [type, url, token, expires_in_seconds]
+
+    ViewerTokenResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid, description: "The stream identifier the token was issued for." }
+        view: { $ref: "#/components/schemas/ViewInfo" }
+      required: [id, view]
 
     CreateStreamResponse:
       type: object
