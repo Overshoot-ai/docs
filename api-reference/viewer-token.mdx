@@ -1,0 +1,26 @@
+---
+title: Create viewer token
+description: "Issue a short-lived, subscribe-only LiveKit token so the stream owner can watch the exact video feed the model is ingesting."
+openapi: 'POST /streams/{stream_id}/viewer-token'
+---
+
+## What it's for
+
+Watching your own stream — a monitoring dashboard, a debug view, or any UI that should show the video the model sees. The token is subscribe-only: it cannot publish media or data-channel messages, so it is safe to hand to a display-only client.
+
+Only the stream owner can request one; other API keys get a `404`.
+
+## How to use it
+
+Connect with any LiveKit client SDK and render the remote video track:
+
+```ts
+import { Room } from 'livekit-client';
+
+const { view } = await createViewerToken(streamId);
+const room = new Room();
+await room.connect(view.url, view.token);
+room.on('trackSubscribed', (track) => track.attach(videoElement));
+```
+
+Tokens expire after `view.expires_in_seconds` (currently 300). A connected session survives token expiry, but reconnecting after expiry requires a fresh token — request a new one from this endpoint.
