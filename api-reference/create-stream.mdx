@@ -13,3 +13,7 @@ The response carries:
 - **`expires_at_ms`** + **`ttl_seconds`** — the lease deadline. Call `/keepalive` before it elapses (every ~2 minutes is safe). After expiry the stream's `state` flips to `ended` and stays there.
 
 The stream sits in `active` state immediately, even before the first frame arrives. `GET /streams/{id}` returns `last_frame_at_ms: null` until a publisher actually delivers a frame.
+
+## Server-pulled sources
+
+Send a `source` body to have the server pull the video from an `rtsp://` camera or HLS playlist instead of accepting a publisher. `publish` comes back `null`, and `GET /streams/{id}` reports `last_pull` instead. The source must be reachable from the public internet, and a url that cannot be opened returns `422` after about 15 seconds of retries. See [Camera sources](/camera-sources).

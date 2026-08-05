@@ -37,6 +37,14 @@ paths:
         expires.
       parameters:
         - $ref: "#/components/parameters/RegionHeader"
+      requestBody:
+        required: false
+        description: |
+          Omit the body entirely to publish video yourself with the returned `publish`
+          credentials. Supply `source` to have the server pull the video instead.
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateStreamRequest" }
       responses:
         "201":
           description: Stream created.
@@ -45,6 +53,15 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/CreateStreamResponse" }
+        "422":
+          description: |
+            The `source` url could not be opened. Returned after roughly 15 seconds
+            of retries. Causes include a host that is unreachable from the public
+            internet, wrong credentials, a scheme that does not match `type`, or a
+            hostname that resolves to a private, loopback, or link-local address.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
         "401":
           description: Missing or invalid API key.
           content:
@@ -634,12 +651,52 @@ components:
         view: { $ref: "#/components/schemas/ViewInfo" }
       required: [id, view]
 
+    SourceSpec:
+      type: object
+      description: |
+        A server-pulled video source. The server connects to this url itself and
+        publishes the video into the stream, so no client publisher is involved.
+        The url must resolve to a publicly routable address: private, loopback, and
+        link-local addresses are rejected. The url is never returned in any response,
+        because rtsp urls commonly embed camera credentials.
+      properties:
+        type:
+          type: string
+          enum: [rtsp, hls]
+          description: |
+            `rtsp` accepts `rtsp://` and `rtsps://` urls, pulled over TCP.
+            `hls` accepts `http://` and `https://` playlist urls.
+        url:
+          type: string
+          example: "rtsp://user:pass@camera.example.com:554/stream"
+      required: [type, url]
+
+    CreateStreamRequest:
+      type: object
+      properties:
+        source: { $ref: "#/components/schemas/SourceSpec" }
+
+    SourceInfo:
+      type: object
+      description: How video reaches this stream. The source url itself is never echoed back.
+      properties:
+        type:
+          type: string
+          enum: [livekit, rtsp, hls]
+          description: "`livekit` when a client publishes; `rtsp` or `hls` when the server pulls."
+      required: [type]
+
     CreateStreamResponse:
       type: object
       properties:
         id: { type: string, format: uuid, description: "Unique stream identifier. Use this in every subsequent stream URL." }
         state: { type: string, enum: [active], description: "Always `active` for a freshly created stream." }
-        publish: { $ref: "#/components/schemas/PublishInfo" }
+        source: { $ref: "#/components/schemas/SourceInfo" }
+        publish:
+          allOf:
+            - $ref: "#/components/schemas/PublishInfo"
+          nullable: true
+          description: "Publish credentials, or `null` for server-pulled sources, which have no client publisher."
         expires_at_ms: { type: integer, description: "Wall-clock Unix ms when the lease will expire if not renewed via `/keepalive`." }
         ttl_seconds: { type: integer, example: 300, description: "Lease TTL in seconds. Currently `300` for all streams." }
       required: [id, state, publish, expires_at_ms, ttl_seconds]
@@ -654,6 +711,16 @@ components:
           description: |
             Lifecycle state. `active` while the stream accepts publishers and inference.
             `ended` once it has expired or been deleted — this transition is terminal.
+        source: { $ref: "#/components/schemas/SourceInfo" }
+        last_pull:
+          type: integer
+          nullable: true
+          description: |
+            Server-pulled sources only. Wall-clock Unix ms of the most recent frame
+            pulled from the source, written at most once per second. A value that keeps
+            advancing means the pull is healthy; one that is frozen or `null` means the
+            source has gone quiet, which is distinct from the stream having failed.
+            Always `null` for client-published streams.
         stream_time_ms:
           type: number
           nullable: true
@@ -723,7 +790,11 @@ components:
         expires_at_ms: { type: integer }
         ttl_seconds: { type: integer, example: 300 }
         stream_time_ms: { type: number, description: "Current stream-clock position in ms." }
-        publish: { $ref: "#/components/schemas/PublishInfo" }
+        publish:
+          allOf:
+            - $ref: "#/components/schemas/PublishInfo"
+          nullable: true
+          description: "Fresh publish credentials, or `null` for server-pulled sources, which have no client publisher."
       required: [id, expires_at_ms, ttl_seconds, publish]
 
     DeleteStreamResponse:

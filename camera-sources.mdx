@@ -1,0 +1,142 @@
+---
+title: "Camera sources"
+description: "Point a Stream at an rtsp:// camera or HLS playlist and the server pulls the video itself, with no client publisher involved."
+---
+
+By default you publish video into a `Stream` yourself: `POST /streams` hands back LiveKit credentials, and your client joins the room and pushes frames.
+
+A camera source inverts that. You pass a url, and the server connects to it and pulls the video. Nothing runs on your side, and there is no publisher to keep alive.
+
+Use this for fixed cameras — an IP camera, an NVR feed, a public HLS stream — where no browser or app is in the loop.
+
+## Create a Stream from a url
+
+Pass a `source` object:
+
+```shellscript
+curl -X POST https://api.overshoot.ai/v1beta/streams \
+  -H "Authorization: Bearer $OVERSHOOT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"source": {"type": "rtsp", "url": "rtsp://user:pass@camera.example.com:554/stream"}}'
+```
+
+| `type` | Url schemes | Notes |
+| --- | --- | --- |
+| `rtsp` | `rtsp://`, `rtsps://` | Pulled over TCP. |
+| `hls` | `http://`, `https://` | Playlist url, live or static. |
+
+The response carries `publish: null` — there is no client publisher — and reports the source type:
+
+<Accordion title="Sample response">
+  ```json focus={4-6}
+  {
+    "id": "c81ac419-841f-418f-9fb3-1a42a5b828df",
+    "state": "active",
+    "source": {
+      "type": "rtsp"
+    },
+    "publish": null,
+    "expires_at_ms": 1785895507840,
+    "ttl_seconds": 300
+  }
+  ```
+</Accordion>
+
+The url is never returned in any response, because rtsp urls commonly carry camera credentials.
+
+## The camera must be publicly reachable
+
+The server connects to your url from our infrastructure, so the camera needs a publicly routable address.
+
+Urls that resolve to private, loopback, or link-local addresses are rejected — `192.168.x.x`, `10.x.x.x`, `localhost`, `169.254.x.x`. A camera on an office LAN will not connect.
+
+To use one, give it a public path first: a port forward, a static public IP, or a tunnel that exposes it on a public hostname. If none of those are available, publish into the `Stream` from inside your network instead.
+
+## Confirm frames are arriving
+
+A `201` means the source opened. It does not yet mean frames are flowing. `GET /streams/{stream_id}` returns `last_pull`, the timestamp of the most recent frame pulled from the source:
+
+```shellscript
+curl https://api.overshoot.ai/v1beta/streams/{stream_id} \
+  -H "Authorization: Bearer $OVERSHOOT_API_KEY"
+```
+
+<Accordion title="Sample response">
+  ```json focus={4}
+  {
+    "id": "c81ac419-841f-418f-9fb3-1a42a5b828df",
+    "state": "active",
+    "last_pull": 1785895207840,
+    "stream_time_ms": 12480,
+    "last_frame_at_ms": 1785895207840,
+    "recent_fps": 30.0,
+    "expires_at_ms": 1785895507840,
+    "ttl_seconds": 300
+  }
+  ```
+</Accordion>
+
+A `last_pull` that keeps advancing means the pull is healthy. A `last_pull` that is `null`, or frozen seconds in the past, means the source has gone quiet — distinct from the `Stream` having failed, and worth separating in your monitoring.
+
+## Ask questions
+
+Identical to any other `Stream`. Reference it with an `ovs://` url:
+
+```shellscript
+curl -X POST https://api.overshoot.ai/v1beta/chat/completions \
+  -H "Authorization: Bearer $OVERSHOOT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "google/gemma-4-E4B-it",
+    "messages": [{
+      "role": "user",
+      "content": [
+        { "type": "text", "text": "Describe the scene." },
+        { "type": "video_url", "video_url": { "url": "ovs://streams/{stream_id}?start_offset_ms=-3000&max_fps=5" } }
+      ]
+    }]
+  }'
+```
+
+## Watch the feed
+
+The server republishes the pulled video into the `Stream`'s LiveKit room, so you can watch exactly what the model sees. Request a [viewer token](/api-reference/viewer-token) and subscribe with any LiveKit client.
+
+Nothing has to be watching for the pull to run.
+
+## When the source drops
+
+If the camera disconnects, the server reconnects on its own, backing off from 1 second to a maximum of 30 seconds between attempts. Brief network blips recover without action from you.
+
+A source that ends cleanly is treated differently from one that drops. If the video ends, and ends again shortly after a reconnect, the server treats the source as finished and ends the `Stream` rather than retrying indefinitely. A finite video file served over RTSP behaves this way.
+
+## Errors
+
+A `422` means the source could not be opened. The server retries for roughly 15 seconds before returning it, so a failing request takes about that long.
+
+```json
+{ "detail": "Could not connect to source url (check reachability and credentials)" }
+```
+
+Check, in order:
+
+- The host is reachable from the public internet
+- Credentials in the url are correct
+- `type` matches the scheme — `rtsp` needs `rtsp://` or `rtsps://`, `hls` needs `http://` or `https://`
+- The hostname resolves
+
+<Visibility for="agents">
+  The 15-second retry window exists because a live HLS playlist created moments earlier
+  may contain no segments yet, and a single open attempt against it fails instantly. A
+  source that becomes readable within the window still returns `201`. Do not treat a slow
+  `422` as a timeout to retry blindly: the server has already retried. Re-request only
+  after changing the url or fixing reachability.
+
+  `last_pull` is written at most once per second, so treat any value within the last two
+  seconds as current. It is always `null` for client-published streams, so do not use its
+  absence to infer that a pull has failed without first checking `source.type`.
+</Visibility>
+
+## Keepalive and teardown
+
+Unchanged from any other `Stream`. Renew the lease with `/keepalive`, and `DELETE` the `Stream` when finished — that stops the pull. The keepalive response also carries `publish: null` for camera sources.
