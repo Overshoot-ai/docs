@@ -27,6 +27,7 @@
               "models",
               "glossary",
               "best-practices",
+              "changelog",
               {
                 "group": "Integrations",
                 "icon": "plug",

@@ -1,0 +1,120 @@
+---
+title: "Changelog"
+description: "Dated list of changes to the Overshoot API, models, documentation and terms. Newest entries first, grouped by month."
+---
+
+This page lists changes to the Overshoot API, the hosted models, the documentation and the terms. Customers receive prior notice of scheduled changes to the Services they use.
+
+<Update label="September 2026">
+
+### Terms of Service updated
+
+**September 28, 2026**
+
+The Terms of Service were published with a last updated date of September 28, 2026. Read them at [platform.overshoot.ai/terms.html](https://platform.overshoot.ai/terms.html).
+
+</Update>
+
+<Update label="August 2026">
+
+### Camera sources
+
+**August 5, 2026**
+
+Streams can be created from a remote camera source. Pass a `source` object with an RTSP URL or an HLS playlist URL when you create the stream. The server pulls the video, so no client publisher is needed. See [Camera sources](/camera-sources).
+
+</Update>
+
+<Update label="July 2026">
+
+### Viewer token endpoint
+
+**July 21, 2026**
+
+`POST /streams/{stream_id}/viewer-token` returns a subscribe-only token. Use it to watch the video that the model is analyzing. The token cannot publish media or data. See [Create viewer token](/api-reference/viewer-token).
+
+### LiveKit integration guide
+
+**July 20, 2026**
+
+New guide on building an agent that joins a LiveKit room, analyzes frames with Overshoot and publishes structured results to the room. See [LiveKit](/integrations/livekit).
+
+</Update>
+
+<Update label="June 2026">
+
+### API reference rewritten for v1beta
+
+**June 16, 2026**
+
+The API reference was rewritten for the v1beta API. All guides use the base URL `https://api.overshoot.ai/v1beta`. The version picker label was set to v1beta on June 17. See the [API introduction](/api-reference/introduction).
+
+### Billing endpoints
+
+**June 16, 2026**
+
+The API reference documents four billing endpoints: [list pricing](/api-reference/list-pricing), [get model pricing](/api-reference/get-pricing), [get prepaid balance](/api-reference/get-balance) and [create checkout session](/api-reference/create-checkout).
+
+### Model list refreshed
+
+**June 16, 2026**
+
+The [Models](/models) page and the code examples use the model IDs returned by the live `/models` endpoint. The endpoint remains the source of truth.
+
+</Update>
+
+<Update label="May 2026">
+
+### Quickstart snippets fill in from page inputs
+
+**May 16, 2026**
+
+The [Quickstart](/quickstart) has inputs for the API key, the stream ID and the model. The code snippets on the page update as you type.
+
+### Multimodal processor rewrite
+
+**May 13, 2026**
+
+Engineering post on the rewrite of the multimodal processor that prepares video input for the Qwen3 and Gemma 4 model families. Model outputs are unchanged. Read the [post](https://www.overshoot.ai/blogs/qwen-multimodal-processor).
+
+### Gemma 4 vision encoder batching
+
+**May 12, 2026**
+
+Engineering post on a change to the Gemma 4 vision encoder. Video frames are processed as a batch instead of one by one. Model outputs are unchanged. Read the [post](https://www.overshoot.ai/blogs/gemma-4-batched-encoder).
+
+### Models page reorganized
+
+**May 1, 2026**
+
+The [Models](/models) page was refreshed to match the model registry. It is split into Overshoot-hosted models and proprietary passthrough models.
+
+</Update>
+
+<Update label="April 2026">
+
+### Stream URL scheme
+
+**April 30, 2026**
+
+Stream references in chat completion requests use the `ovs://streams/<id>` URL scheme, for single frames and for video segments. See [Chat Completion](/chat-completion).
+
+### v0.2 API deprecated
+
+**April 30, 2026**
+
+The v0.2 API is deprecated. Its reference stays online for existing integrations, with a deprecation notice on each page. New integrations use the current API. See the [v0.2 reference](/api-reference/v0.2/introduction).
+
+### New documentation site
+
+**April 29, 2026**
+
+The documentation site launched with the API reference for the current API: streams, chat completions and models.
+
+### Gemma 4 models available
+
+**April 2, 2026**
+
+Gemma 4 models were made available on Overshoot on the day of their release. Read the [post](https://www.overshoot.ai/blogs/gemma-4-day-zero).
+
+</Update>
