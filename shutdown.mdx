@@ -1,0 +1,64 @@
+---
+title: "API shutdown on December 5, 2026"
+description: "The Overshoot API shuts down on Sat Dec 5 2026 at 10:00 AM PT. Dates, the shutdown error and how to migrate."
+---
+
+The Overshoot API shuts down on Saturday, December 5, 2026 at 10:00 AM PT. This covers v0.2, v1, v1beta, the playground, `https://platform.overshoot.ai`, and the LiveKit and TURN servers behind Streams. Overshoot now offers inference optimization as a service.
+
+Full details: [overshoot.ai/api-sunset](https://overshoot.ai/api-sunset).
+
+## Dates
+
+| Date (PT) | What happens |
+|---|---|
+| Nov 15, 2026 | Responses carry `Deprecation`, `Sunset: Sat, 05 Dec 2026 18:00:00 GMT` and `Link` headers. |
+| Nov 17, 2026, 10:00-10:30 AM | Test 1: every request returns the shutdown error. Service resumes after the window. |
+| Dec 1, 2026, 10:00 AM-12:00 PM | Test 2: same as test 1. |
+| Dec 5, 2026, 10:00 AM | Shutdown. Every request returns the shutdown error. |
+
+Credits keep working until the shutdown. Unused paid credit is refunded on December 5. Stored data is deleted within 90 days of the shutdown.
+
+## The shutdown error
+
+Every route returns HTTP 410. Treat code `api_shutdown` as permanent and do not retry.
+
+```json
+{
+  "error": {
+    "message": "The Overshoot API was shut down on Saturday, December 5, 2026. Migration guide and details: https://overshoot.ai/api-sunset",
+    "type": "api_shutdown",
+    "code": "api_shutdown",
+    "param": null,
+    "sunset_url": "https://overshoot.ai/api-sunset"
+  }
+}
+```
+
+## Migrate chat completions
+
+`/chat/completions` follows the OpenAI format. Change three values: the base URL, the API key and the model id. Send images as `image_url` parts with an https URL or a base64 data URL.
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="https://openrouter.ai/api/v1",  # your provider's OpenAI-compatible base URL
+    api_key=PROVIDER_API_KEY,
+)
+resp = client.chat.completions.create(
+    model="google/gemma-4-31b-it",  # your provider's model id
+    messages=[{"role": "user", "content": [
+        {"type": "text", "text": "Is anyone in the frame?"},
+        {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + frame_b64}},
+    ]}],
+    max_tokens=64,
+)
+```
+
+## Migrate Streams and ovs:// references
+
+`ovs://` references and Streams have no equivalent at other providers. Capture frames in your own code, encode them as JPEG, and send them as base64 `image_url` parts. To replace `ovs://streams/{stream_id}?frame_index=-1`, send the latest frame. To replace a multi-frame or segment reference, keep the last few frames and send them oldest first. The [migration guide](https://overshoot.ai/api-sunset#migrate) has a full OpenCV loop and the browser canvas version.
+
+## Help
+
+Email [founders@overshoot.ai](mailto:founders@overshoot.ai) or [book a 15-minute call](https://calendly.com/overshootai/overshoot-migration).
