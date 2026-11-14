@@ -5,7 +5,7 @@ description: "The Overshoot API shuts down on Sat Dec 5 2026 at 10:00 AM PT. Dat
 
 The Overshoot API shuts down on Saturday, December 5, 2026 at 10:00 AM PT. This covers v0.2, v1, v1beta, the playground, `https://platform.overshoot.ai`, and the LiveKit and TURN servers behind Streams. Overshoot now offers inference optimization as a service.
 
-Full details: [overshoot.ai/api-sunset](https://overshoot.ai/api-sunset).
+Full details: [overshoot.ai/api-sunset](https://platform.overshoot.ai/sunset).
 
 ## Dates
 
@@ -25,11 +25,11 @@ Every route returns HTTP 410. Treat code `api_shutdown` as permanent and do not 
 ```json
 {
   "error": {
-    "message": "The Overshoot API was shut down on Saturday, December 5, 2026. Migration guide and details: https://overshoot.ai/api-sunset",
+    "message": "The Overshoot API was shut down on Saturday, December 5, 2026. Migration guide and details: https://platform.overshoot.ai/sunset",
     "type": "api_shutdown",
     "code": "api_shutdown",
     "param": null,
-    "sunset_url": "https://overshoot.ai/api-sunset"
+    "sunset_url": "https://platform.overshoot.ai/sunset"
   }
 }
 ```
@@ -57,7 +57,7 @@ resp = client.chat.completions.create(
 
 ## Migrate Streams and ovs:// references
 
-`ovs://` references and Streams have no equivalent at other providers. Capture frames in your own code, encode them as JPEG, and send them as base64 `image_url` parts. To replace `ovs://streams/{stream_id}?frame_index=-1`, send the latest frame. To replace a multi-frame or segment reference, keep the last few frames and send them oldest first. The [migration guide](https://overshoot.ai/api-sunset#migrate) has a full OpenCV loop and the browser canvas version.
+`ovs://` references and Streams have no equivalent at other providers. Capture frames in your own code, encode them as JPEG, and send them as base64 `image_url` parts. To replace `ovs://streams/{stream_id}?frame_index=-1`, send the latest frame. To replace a multi-frame or segment reference, keep the last few frames and send them oldest first. The [migration guide](https://platform.overshoot.ai/sunset#migrate) has a full OpenCV loop and the browser canvas version.
 
 ## Help
 
