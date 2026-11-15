@@ -19,6 +19,7 @@
             "tab": "Guides",
             "icon": "book-open",
             "pages": [
+              "shutdown",
               "intro",
               "quickstart",
               "the-stream",
@@ -144,5 +145,9 @@
       "github": "https://github.com/overshoot-ai",
       "linkedin": "https://linkedin.com/company/overshootai"
     }
+  },
+  "banner": {
+    "content": "The Overshoot API shuts down on Saturday, December 5, 2026 at 10:00 AM PT. [Read the shutdown and migration guide](/shutdown).",
+    "dismissible": false
   }
 }
